@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jackfruit Designs — Websites That Stand Out</title>
+    <meta name="description" content="Jack — web design, lead generation, content creation, business strategy, CAD, and 3D printing services. Websites that stand out.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- NAV -->
+    <nav class="nav" id="nav">
+        <div class="nav__inner">
+            <a href="#home" class="nav__logo">
+                <div class="nav__logo-crop">
+                    <img src="logo.png" alt="Jackfruit Designs" class="nav__logo-img">
+                </div>
+            </a>
+            <ul class="nav__links">
+                <li><a href="#services">Services</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact" class="nav__cta">Let's Talk</a></li>
+            </ul>
+            <button class="nav__hamburger" id="hamburger" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Let's Talk</a></li>
+        </ul>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero" id="home">
+        <div class="hero__inner">
+            <p class="hero__eyebrow">Web Design &middot; Strategy &middot; Engineering</p>
+            <h1 class="hero__headline">
+                <span class="hw">Websites</span><br>
+                <span class="hw text-green">That</span>&nbsp;<span class="hw text-green">Stand</span><br>
+                <span class="hw">Out.</span>
+            </h1>
+
+            <div class="hero__fruit-lineup" aria-hidden="true">
+                <span class="fruit-icon">🍎</span>
+                <span class="fruit-icon">🍌</span>
+                <span class="fruit-icon">🍐</span>
+                <span class="fruit-icon">🍑</span>
+                <span class="fruit-icon">🍇</span>
+                <span class="fruit-sep">→</span>
+                <span class="fruit-jackfruit">J</span>
+            </div>
+
+            <p class="hero__sub">
+                I help businesses grow through clean web design, sharp content,
+                and strategies that actually convert.
+            </p>
+            <div class="hero__actions">
+                <a href="#contact" class="btn btn--primary">Start a Project</a>
+                <a href="#services" class="btn btn--ghost">See Services</a>
+                <button class="btn btn--game" onclick="startJackfruitGame()">🎮 Play a Game</button>
+            </div>
+        </div>
+        <div class="hero__glow" aria-hidden="true"></div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="services" id="services">
+        <div class="container">
+            <div class="section-header">
+                <p class="eyebrow">What I Do</p>
+                <h2>Services Built to<br><span class="text-green">Drive Results</span></h2>
+            </div>
+            <div class="services__grid">
+
+                <div class="service-card">
+                    <div class="service-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+                        </svg>
+                    </div>
+                    <h3>Web Design</h3>
+                    <p>Clean, fast, conversion-focused websites built to look sharp on every screen and grow your business.</p>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <h3>Lead Generation</h3>
+                    <p>Funnels, forms, and flows that turn visitors into customers. Systems designed to capture and convert.</p>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </div>
+                    <h3>Content Creation</h3>
+                    <p>Copy that ranks and converts — blog posts, landing pages, and brand messaging with real purpose behind it.</p>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                    </div>
+                    <h3>Business Strategy</h3>
+                    <p>Brand positioning, go-to-market planning, and competitive analysis that helps businesses make sharper decisions.</p>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                        </svg>
+                    </div>
+                    <h3>CAD &amp; SolidWorks</h3>
+                    <p>Precision 3D modeling and engineering design in SolidWorks — from concept sketch to production-ready file.</p>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-card__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                    </div>
+                    <h3>3D Printing</h3>
+                    <p>Rapid prototyping and custom parts using Creality printers — from your file to a physical product fast.</p>
+                </div>
+
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="about" id="about">
+        <div class="container about__inner">
+            <div class="about__text">
+                <p class="eyebrow">About</p>
+                <h2>Hi, I'm Jack.<br><span class="text-green">I Build Things.</span></h2>
+                <p class="about__body">
+                    At 15, I'm already helping real businesses grow. I'm currently leading a full company rebrand — handling strategy, web design, content, and brand identity from the ground up.
+                </p>
+                <p class="about__body">
+                    I work at the intersection of design, engineering, and marketing. Whether it's a website that converts, a CAD model ready for production, or a content strategy that moves the needle — I deliver work that stands out.
+                </p>
+                <a href="#contact" class="btn btn--primary">Work With Me</a>
+            </div>
+            <div class="about__visual">
+                <img src="headshot.png" alt="Jack Pacanowsky" class="about__photo">
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <p class="eyebrow eyebrow--bright">Get In Touch</p>
+                <h2 class="contact__heading">Ready to<br><span class="text-green-bright">Stand Out?</span></h2>
+                <p class="contact__sub">Tell me about your project. I'll get back to you as soon as I can.</p>
+            </div>
+            <form class="contact__form" id="contactForm" novalidate>
+                <div class="form-row">
+                    <input type="text" name="name" placeholder="Your Name" required autocomplete="name">
+                    <input type="email" name="email" placeholder="Email Address" required autocomplete="email">
+                </div>
+                <input type="text" name="company" placeholder="Company / Project (optional)" autocomplete="organization">
+                <select name="service" required>
+                    <option value="" disabled selected>What do you need?</option>
+                    <option>Web Design</option>
+                    <option>Lead Generation</option>
+                    <option>Content Creation</option>
+                    <option>Business Strategy</option>
+                    <option>CAD / SolidWorks</option>
+                    <option>3D Printing</option>
+                    <option>Multiple Services</option>
+                </select>
+                <textarea name="message" placeholder="Tell me about your project..." rows="5" required></textarea>
+                <button type="submit" class="btn btn--primary btn--full">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer__inner">
+            <div class="footer__logo">
+                <span class="logo-line">
+                    <span class="logo-jack">JACK</span><span class="logo-fruit logo-fruit--bright">FRUIT</span>
+                </span>
+                <span class="logo-designs logo-designs--muted">DESIGNS</span>
+            </div>
+            <p class="footer__tagline">Websites That Stand Out.</p>
+            <p class="footer__copy">&copy; 2026 Jackfruit Designs. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
