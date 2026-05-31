@@ -163,22 +163,43 @@ a { color: inherit; }
     gap: 24px;
 }
 
-.nav__logo { text-decoration: none; flex-shrink: 0; }
-
-/* Crop the phone screenshot (1080×2410) to show only the white logo area.
-   Image renders ~379px tall at 170px wide. Black phone chrome fills top ~115px.
-   Logo sits centered in white area around y=170–230 of the rendered image. */
-.nav__logo-crop {
-    width: 170px;
-    height: 62px;
-    overflow: hidden;
-    display: block;
+.nav__logo {
+    text-decoration: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
 }
-.nav__logo-img {
-    display: block;
-    width: 170px;
-    height: auto;
-    margin-top: -155px;
+
+.nav__logo-line { display: block; line-height: 1; }
+
+.nav__logo-jack {
+    font-family: var(--font-heading);
+    font-weight: 900;
+    font-size: 1.55rem;
+    color: var(--black);
+    letter-spacing: -0.01em;
+}
+
+.nav__logo-fruit {
+    font-family: var(--font-heading);
+    font-weight: 900;
+    font-size: 1.55rem;
+    color: var(--green-dark);
+    letter-spacing: -0.01em;
+}
+
+.nav__logo-designs {
+    font-family: var(--font-heading);
+    font-size: 0.48rem;
+    font-weight: 700;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: var(--gray-600);
+    margin-top: 2px;
 }
 
 .nav__links {
