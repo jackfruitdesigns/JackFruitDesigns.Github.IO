@@ -21,7 +21,7 @@
 
   // ── Entry point ─────────────────────────────────────────────
   // Wall editor: startDrawingMode  |  Game: startGame
-  window.startJackfruitGame = startDrawingMode;
+  window.startJackfruitGame = startGame;
 
   // Custom walls drawn in the wall editor — hero headline area
   const CUSTOM_WALLS = [
@@ -405,26 +405,46 @@
   }
 
   // ════════════════════════════════════════════════════════════
-  //  GAME ENGINE  (wall-following AI — re-enable when walls ready)
-  //  To activate: change the entry point at the top to startGame()
+  //  PAC-MAN GAME ENGINE
   // ════════════════════════════════════════════════════════════
-  const PAC_R     = 14;
-  const ENEMY_R   = 16;
-  const JF_R      = 20;
-  const PAC_SPD   = 2.8;
-  const ENEMY_SPD = 1.55;
-  const JF_SPD    = 2.2;
-  const CELL      = 24;   // pathfinding grid resolution (px per cell)
+  const MCOLS = 21, MROWS = 21;
+  // 0=wall  1=dot  2=power pellet  3=empty walkable
+  const MAZE_SRC = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0],
+    [0,2,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,2,0],
+    [0,1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,0,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,0,1,0],
+    [0,1,1,1,1,0,1,1,1,0,0,0,1,1,1,0,1,1,1,1,0],
+    [0,0,0,0,1,0,0,0,3,0,0,0,3,0,0,0,1,0,0,0,0],
+    [0,0,0,0,1,0,3,3,3,3,3,3,3,3,3,0,1,0,0,0,0],
+    [3,3,3,3,1,3,3,0,3,3,3,3,3,0,3,3,1,3,3,3,3],
+    [0,0,0,0,1,0,3,0,3,3,3,3,3,0,3,0,1,0,0,0,0],
+    [0,0,0,0,1,0,3,3,3,3,3,3,3,3,3,0,1,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,0,3,0,1,1,1,1,1,1,1,1,0],
+    [0,1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1,0],
+    [0,2,1,0,1,1,1,1,1,1,3,1,1,1,1,1,1,0,1,2,0],
+    [0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,0],
+    [0,1,1,1,1,0,1,1,1,0,0,0,1,1,1,0,1,1,1,1,0],
+    [0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0],
+    [0,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,0],
+    [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  ];
 
-  const EMOJIS = ['🍎', '🍌', '🍐', '🍑', '🍇'];
-
+  let CELL, OX, OY;
+  let maze, totalDots, score;
+  let powerTicks, jfTicks, jfBonus, jfImage;
+  let pac, ghosts;
   let canvas, ctx;
-  let gameWalls = [], grid = null, gridCols = 0, gridRows = 0;
-  let pac, enemies, jf;
-  let gameState = 'idle', raf = null, keys = {};
-  let facing = 0, mouthA = 0.25, mouthD = 1, tick = 0;
+  let gameState = 'idle', raf = null, tick = 0;
+  let mouthA = 0.25, mouthD = 1, facing = 0;
+  let keys = {};
   let joystickVec = { dx: 0, dy: 0 };
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const GHOST_EMOJIS = ['🍎','🍌','🍐','🍑','🍇'];
+  const PAC_SPD = 2.0, GHOST_SPD = 1.5;
 
   function startGame() {
     if (gameState === 'playing') return;
@@ -433,13 +453,11 @@
       animateExplode(() => {
         buildGameCanvas();
         buildGameHUD();
-        buildWalls();
-        buildGrid();
-        spawnAll();
+        initMaze();
+        spawnEntities();
         lockScroll();
         bindKeys();
         if (isTouch) buildJoystick();
-        document.querySelector('.hero__fruit-lineup')?.classList.add('game-on');
         gameState = 'playing'; tick = 0;
         raf = requestAnimationFrame(gameLoop);
       });
@@ -491,8 +509,7 @@
   }
 
   function buildGameHUD() {
-    rm('jfHUD'); rm('jfDpad'); rm('jfBlocker');
-
+    rm('jfHUD'); rm('jfBlocker');
     const hud = document.createElement('div');
     hud.id = 'jfHUD';
     Object.assign(hud.style, {
@@ -504,314 +521,197 @@
     });
     hud.innerHTML = `
       <span style="color:#6FB833;font-weight:900;font-size:.78rem;letter-spacing:.16em">JACKFRUIT CHASE</span>
-      <span style="color:rgba(255,255,255,.4);font-size:.67rem">
-        ${isTouch ? 'Joystick' : 'WASD / ARROWS'} · Catch the jackfruit · Avoid the fruit ghosts
-      </span>
+      <span id="jfScore" style="color:#fff;font-weight:700;font-size:.85rem;letter-spacing:.08em">0</span>
       <button id="jfQuit" style="${btnCSS('rgba(255,255,255,.22)','rgba(255,255,255,.55)')}">Quit</button>`;
     document.body.appendChild(hud);
     document.getElementById('jfQuit').addEventListener('click', () => finishGame('quit'));
-
-    // Click blocker — stops mouse reaching links/buttons under the game
     const blocker = document.createElement('div');
     blocker.id = 'jfBlocker';
-    Object.assign(blocker.style, {
-      position:'fixed', inset:0, zIndex:9997, pointerEvents:'all', cursor:'default',
-    });
-    blocker.addEventListener('click',     e => e.stopPropagation());
+    Object.assign(blocker.style, { position:'fixed', inset:0, zIndex:9997, pointerEvents:'all', cursor:'default' });
+    blocker.addEventListener('click', e => e.stopPropagation());
     blocker.addEventListener('mousedown', e => e.stopPropagation());
     document.body.appendChild(blocker);
   }
 
-  function buildWalls() {
-    gameWalls = [];
-
-    // Headline words — measured live so they work at any screen size
-    document.querySelectorAll('.hw').forEach(el => {
-      const b = el.getBoundingClientRect();
-      if (b.width < 2 || b.height < 2) return;
-      gameWalls.push({ x: b.left - 4, y: b.top - 4, w: b.width + 8, h: b.height + 8 });
-    });
-
-    // Auto-detected DOM walls for nav, buttons, cards etc.
-    const add = (sel, P) => document.querySelectorAll(sel).forEach(el => {
-      const b = el.getBoundingClientRect();
-      if (b.width < 2 || b.height < 2 || b.bottom < 0 || b.top > innerHeight) return;
-      gameWalls.push({ x:b.left-P, y:b.top-P, w:b.width+P*2, h:b.height+P*2 });
-    });
-
-    ['#nav','#jfHUD','.hero__eyebrow','.hero__sub','.hero__actions',
-     '.section-header','.service-card','.about__text .eyebrow','.about__text h2',
-     '.about__body','.about__text .btn','.about__stats-card',
-     '.contact__heading','.contact__sub','.contact__form','.footer__inner',
-    ].forEach(s => add(s, 4));
+  function initMaze() {
+    maze = MAZE_SRC.map(row => [...row]);
+    totalDots = maze.flat().filter(c => c===1||c===2).length;
+    score = 0; powerTicks = 0; jfTicks = 480; jfBonus = null;
+    const HUD = 48;
+    CELL = Math.max(16, Math.min(Math.floor(innerWidth/MCOLS), Math.floor((innerHeight-HUD)/MROWS)));
+    OX = Math.floor((innerWidth  - CELL*MCOLS) / 2);
+    OY = HUD + Math.floor((innerHeight - HUD - CELL*MROWS) / 2);
   }
 
-  function hitWall(px, py, pr, wall) {
-    if (wall.type === 'circle') return (px-wall.x)**2 + (py-wall.y)**2 < (pr+wall.r)**2;
-    const a = wall.angle||0;
-    let lx=px, ly=py;
-    if (a) {
-      const cx=wall.x+wall.w/2, cy=wall.y+wall.h/2;
-      lx=(px-cx)*Math.cos(-a)-(py-cy)*Math.sin(-a)+cx;
-      ly=(px-cx)*Math.sin(-a)+(py-cy)*Math.cos(-a)+cy;
+  function spawnEntities() {
+    pac = { x: OX+10*CELL+CELL/2, y: OY+18*CELL+CELL/2, dx:0, dy:0, nextDx:-1, nextDy:0 };
+    const starts = [[1,2],[1,18],[4,10],[12,2],[12,18]];
+    ghosts = GHOST_EMOJIS.map((emoji, i) => {
+      const [r,c] = starts[i];
+      return { emoji, x:OX+c*CELL+CELL/2, y:OY+r*CELL+CELL/2, dx:i%2===0?1:-1, dy:0, scared:false };
+    });
+  }
+
+  function isWall(col, row) {
+    if (row<0||row>=MROWS) return true;
+    return maze[row][((col%MCOLS)+MCOLS)%MCOLS] === 0;
+  }
+  function tileOf(px, py) {
+    return { col:Math.max(0,Math.min(MCOLS-1,Math.floor((px-OX)/CELL))), row:Math.max(0,Math.min(MROWS-1,Math.floor((py-OY)/CELL))) };
+  }
+  function centerOf(col, row) { return { x:OX+col*CELL+CELL/2, y:OY+row*CELL+CELL/2 }; }
+
+  function movePac() {
+    if      (keys['ArrowLeft'] ||keys.a||keys.A||joystickVec.dx<-.3) { pac.nextDx=-1; pac.nextDy=0; }
+    else if (keys['ArrowRight']||keys.d||keys.D||joystickVec.dx> .3) { pac.nextDx= 1; pac.nextDy=0; }
+    else if (keys['ArrowUp']   ||keys.w||keys.W||joystickVec.dy<-.3) { pac.nextDx=0; pac.nextDy=-1; }
+    else if (keys['ArrowDown'] ||keys.s||keys.S||joystickVec.dy> .3) { pac.nextDx=0; pac.nextDy= 1; }
+    const {col,row} = tileOf(pac.x,pac.y);
+    const {x:cx,y:cy} = centerOf(col,row);
+    const snap = PAC_SPD+1;
+    if (Math.abs(pac.x-cx)<snap && Math.abs(pac.y-cy)<snap) {
+      pac.x=cx; pac.y=cy;
+      const cell=maze[row]?.[col];
+      if (cell===1) { maze[row][col]=3; score+=10; totalDots--; }
+      else if (cell===2) { maze[row][col]=3; score+=50; totalDots--; powerTicks=300; }
+      if (pac.nextDx!==pac.dx||pac.nextDy!==pac.dy) {
+        if (!isWall(col+pac.nextDx,row+pac.nextDy)) { pac.dx=pac.nextDx; pac.dy=pac.nextDy; }
+      }
+      if (isWall(col+pac.dx,row+pac.dy)) { pac.dx=0; pac.dy=0; }
     }
-    const nx=Math.max(wall.x,Math.min(lx,wall.x+wall.w));
-    const ny=Math.max(wall.y,Math.min(ly,wall.y+wall.h));
-    return (lx-nx)**2+(ly-ny)**2 < pr*pr;
-  }
-  function isOpen(x, y, r) {
-    if (x-r<0||x+r>innerWidth||y-r<0||y+r>innerHeight) return false;
-    return !gameWalls.some(w => hitWall(x, y, r, w));
-  }
-  function findSpot(x0, x1, y0, y1, r, avoid, minD) {
-    for (let i=0; i<800; i++) {
-      const x=x0+Math.random()*(x1-x0), y=y0+Math.random()*(y1-y0);
-      if (!isOpen(x,y,r+2)) continue;
-      if (avoid && (x-avoid.x)**2+(y-avoid.y)**2 < minD**2) continue;
-      return {x,y};
-    }
-    for (let yy=y0+r; yy<y1; yy+=8)
-      for (let xx=x0+r; xx<x1; xx+=8)
-        if (isOpen(xx,yy,r+2)) return {x:xx,y:yy};
-    return {x:(x0+x1)/2,y:(y0+y1)/2};
+    pac.x+=pac.dx*PAC_SPD; pac.y+=pac.dy*PAC_SPD;
+    if (pac.dx>0) facing=0; else if (pac.dx<0) facing=Math.PI;
+    else if (pac.dy>0) facing=Math.PI/2; else if (pac.dy<0) facing=-Math.PI/2;
+    if (pac.x<OX-CELL) pac.x=OX+MCOLS*CELL-CELL/2;
+    if (pac.x>OX+MCOLS*CELL) pac.x=OX+CELL/2;
   }
 
-  // ── Pathfinding grid ─────────────────────────────────────
-  function buildGrid() {
-    gridCols = Math.ceil(innerWidth  / CELL);
-    gridRows = Math.ceil(innerHeight / CELL);
-    // 1 = walkable, 0 = blocked
-    grid = Array.from({length: gridRows}, () => new Uint8Array(gridCols).fill(1));
-    gameWalls.forEach(w => {
-      const c0 = Math.max(0, Math.floor(w.x / CELL));
-      const r0 = Math.max(0, Math.floor(w.y / CELL));
-      const c1 = Math.min(gridCols, Math.ceil((w.x + w.w) / CELL));
-      const r1 = Math.min(gridRows, Math.ceil((w.y + w.h) / CELL));
-      for (let r = r0; r < r1; r++)
-        for (let c = c0; c < c1; c++)
-          grid[r][c] = 0;
-    });
-  }
-
-  function cellOf(x, y) {
-    return {
-      col: Math.max(0, Math.min(gridCols-1, Math.floor(x / CELL))),
-      row: Math.max(0, Math.min(gridRows-1, Math.floor(y / CELL))),
-    };
-  }
-  function centerOf(col, row) {
-    return { x: col*CELL + CELL/2, y: row*CELL + CELL/2 };
-  }
-
-  // BFS pathfind — returns array of {x,y} world waypoints, empty = no path
-  function findPath(fx, fy, tx, ty) {
-    const start = cellOf(fx, fy);
-    const goal  = cellOf(tx, ty);
-    if (start.col===goal.col && start.row===goal.row) return [];
-
-    const N   = gridRows * gridCols;
-    const vis = new Uint8Array(N);
-    const pC  = new Int16Array(N).fill(-1);
-    const pR  = new Int16Array(N).fill(-1);
-    const idx = (c, r) => r * gridCols + c;
-    const queue = [[start.col, start.row]];
-    vis[idx(start.col, start.row)] = 1;
-
-    const dirs = [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[-1,1],[1,-1],[1,1]];
-    let found = false;
-
-    outer: while (queue.length) {
-      const [cc, cr] = queue.shift();
-      for (const [dc, dr] of dirs) {
-        const nc = cc+dc, nr = cr+dr;
-        if (nc<0||nc>=gridCols||nr<0||nr>=gridRows) continue;
-        if (!grid[nr][nc] || vis[idx(nc,nr)]) continue;
-        // No diagonal wall-clipping
-        if (dc!==0 && dr!==0 && (!grid[cr+dr][cc] || !grid[cr][cc+dc])) continue;
-        vis[idx(nc,nr)] = 1;
-        pC[idx(nc,nr)] = cc; pR[idx(nc,nr)] = cr;
-        if (nc===goal.col && nr===goal.row) { found=true; break outer; }
-        queue.push([nc, nr]);
+  function moveGhost(g) {
+    const {col,row}=tileOf(g.x,g.y), {x:cx,y:cy}=centerOf(col,row);
+    const spd=g.scared?GHOST_SPD*.5:GHOST_SPD;
+    if (Math.abs(g.x-cx)<spd+1 && Math.abs(g.y-cy)<spd+1) {
+      g.x=cx; g.y=cy;
+      const pt=tileOf(pac.x,pac.y);
+      const dirs=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+      let valid=dirs.filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!isWall(col+d.dx,row+d.dy));
+      if (!valid.length) valid=dirs.filter(d=>!isWall(col+d.dx,row+d.dy));
+      if (valid.length) {
+        valid.sort((a,b)=>{
+          const da=(col+a.dx-pt.col)**2+(row+a.dy-pt.row)**2;
+          const db=(col+b.dx-pt.col)**2+(row+b.dy-pt.row)**2;
+          return g.scared?db-da:da-db;
+        });
+        g.dx=valid[0].dx; g.dy=valid[0].dy;
       }
     }
+    g.x+=g.dx*spd; g.y+=g.dy*spd;
+    if (g.x<OX-CELL) g.x=OX+MCOLS*CELL-CELL/2;
+    if (g.x>OX+MCOLS*CELL) g.x=OX+CELL/2;
+  }
 
-    if (!found) return [];
-    const path = [];
-    let c = goal.col, r = goal.row;
-    while (!(c===start.col && r===start.row)) {
-      path.unshift(centerOf(c, r));
-      const pc = pC[idx(c,r)], pr = pR[idx(c,r)];
-      c = pc; r = pr;
+  function updateJFBonus() {
+    if (--jfTicks<=0) {
+      if (!jfBonus) { jfBonus={col:10,row:14}; jfTicks=300; }
+      else          { jfBonus=null; jfTicks=480; }
     }
-    return path;
-  }
-
-  // Pick a walkable cell that is as far from pac as possible
-  function findFleeTarget() {
-    const pacCell = cellOf(pac.x, pac.y);
-    let best = null, bestDist = -1;
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const r = 1 + Math.floor(Math.random() * (gridRows-2));
-      const c = 1 + Math.floor(Math.random() * (gridCols-2));
-      if (!grid[r][c]) continue;
-      const d = (r-pacCell.row)**2 + (c-pacCell.col)**2;
-      if (d > bestDist) { bestDist = d; best = {r, c}; }
+    if (jfBonus) {
+      const bc=centerOf(jfBonus.col,jfBonus.row);
+      if (Math.hypot(pac.x-bc.x,pac.y-bc.y)<CELL*.85) { score+=1000; jfBonus=null; jfTicks=360; }
     }
-    return best ? centerOf(best.c, best.r) : centerOf(gridCols>>1, gridRows>>1);
-  }
-
-  // Move entity one step along its stored path
-  function stepPath(entity, spd) {
-    if (!entity.path || entity.pathIdx >= entity.path.length) return;
-    const wp = entity.path[entity.pathIdx];
-    const dx = wp.x - entity.x, dy = wp.y - entity.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist <= spd + 1) { entity.x = wp.x; entity.y = wp.y; entity.pathIdx++; }
-    else { entity.x += dx/dist * spd; entity.y += dy/dist * spd; }
-  }
-
-  function spawnAll() {
-    const W=innerWidth, H=innerHeight;
-    // Pac-Man spawns at center bottom
-    pac = findSpot(W*0.4, W*0.6, H*0.75, H-40, PAC_R+2, null, 0);
-    // Jackfruit — spawn far from pac, no path yet (calculated on first update)
-    const jp = findSpot(20,W-20,H*.4,H-20,JF_R+2,pac,180);
-    jf = { x:jp.x, y:jp.y, path:[], pathIdx:0, pathTick:0 };
-    // Enemies — start at each .fruit-icon's DOM position
-    const iconEls = document.querySelectorAll('.fruit-icon');
-    enemies = Array.from(iconEls).map((el, i) => {
-      const b = el.getBoundingClientRect();
-      return {
-        x: b.left+b.width/2, y: b.top+b.height/2,
-        emoji: EMOJIS[i]||'🍎',
-        path: [], pathIdx: 0, pathTick: i*8, // stagger so they don't all recalc same frame
-        wobble: Math.random()*Math.PI*2,
-      };
-    });
   }
 
   function gameLoop() {
-    if (gameState !== 'playing') return;
+    if (gameState!=='playing') return;
     tick++;
     updateGame(); drawGame();
-    raf = requestAnimationFrame(gameLoop);
+    raf=requestAnimationFrame(gameLoop);
   }
 
   function updateGame() {
     movePac();
-    moveEnemies();
-    fleeJackfruit();
-    mouthA += 0.14*mouthD;
-    if (mouthA>.38||mouthA<.02) mouthD*=-1;
-    if ((pac.x-jf.x)**2+(pac.y-jf.y)**2 < (PAC_R+JF_R)**2) { finishGame('won'); return; }
-    for (const e of enemies)
-      if ((pac.x-e.x)**2+(pac.y-e.y)**2 < (PAC_R+ENEMY_R-2)**2) { finishGame('lost'); return; }
-  }
-
-  function movePac() {
-    let dx=0, dy=0;
-    if (keys['ArrowLeft'] ||keys.a||keys.A) dx=-PAC_SPD;
-    if (keys['ArrowRight']||keys.d||keys.D) dx= PAC_SPD;
-    if (keys['ArrowUp']   ||keys.w||keys.W) dy=-PAC_SPD;
-    if (keys['ArrowDown'] ||keys.s||keys.S) dy= PAC_SPD;
-    if (Math.abs(joystickVec.dx) > 0.15) dx = joystickVec.dx * PAC_SPD;
-    if (Math.abs(joystickVec.dy) > 0.15) dy = joystickVec.dy * PAC_SPD;
-    if (dx && isOpen(pac.x+dx,pac.y,PAC_R)) { pac.x+=dx; facing=dx>0?0:Math.PI; }
-    if (dy && isOpen(pac.x,pac.y+dy,PAC_R)) { pac.y+=dy; facing=dy>0?Math.PI/2:-Math.PI/2; }
-  }
-
-  // BFS chase — recalculate path to pac every 30 ticks
-  function moveEnemies() {
-    enemies.forEach(e => {
-      if (tick - e.pathTick >= 30 || e.pathIdx >= e.path.length) {
-        e.path    = findPath(e.x, e.y, pac.x, pac.y);
-        e.pathIdx = 0;
-        e.pathTick = tick;
+    powerTicks=Math.max(0,powerTicks-1);
+    ghosts.forEach(g=>{ g.scared=powerTicks>0; });
+    ghosts.forEach(moveGhost);
+    updateJFBonus();
+    mouthA+=0.14*mouthD; if (mouthA>.38||mouthA<.02) mouthD*=-1;
+    const el=document.getElementById('jfScore'); if (el) el.textContent=score;
+    for (const g of ghosts) {
+      if (Math.hypot(pac.x-g.x,pac.y-g.y)<CELL*.65) {
+        if (g.scared) {
+          g.scared=false; score+=200;
+          const sp=centerOf(g.dx<0?18:2,1); g.x=sp.x; g.y=sp.y; g.dx=0; g.dy=1;
+        } else { finishGame('lost'); return; }
       }
-      stepPath(e, ENEMY_SPD);
-    });
-  }
-
-  // BFS flee — pick a far-away cell and pathfind there.
-  // Recalculate when pac is close or path is exhausted.
-  function fleeJackfruit() {
-    const distToPac = Math.hypot(jf.x-pac.x, jf.y-pac.y);
-    const pathDone  = jf.pathIdx >= jf.path.length;
-    const pacClose  = distToPac < 220;
-
-    if (pathDone || (pacClose && tick - jf.pathTick >= 25)) {
-      const target  = findFleeTarget();
-      jf.path    = findPath(jf.x, jf.y, target.x, target.y);
-      jf.pathIdx = 0;
-      jf.pathTick = tick;
     }
-
-    const spd = JF_SPD * (1 + Math.max(0,(220-distToPac)/220)*0.8);
-    stepPath(jf, spd);
+    if (totalDots<=0) { finishGame('won'); return; }
   }
 
   function drawGame() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawJFTarget();
-    enemies.forEach(drawEnemy);
-    drawPacman();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#060808'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    drawMaze(); drawJFBonus(); ghosts.forEach(drawGhost); drawPacman();
+  }
+
+  function drawMaze() {
+    for (let r=0;r<MROWS;r++) for (let c=0;c<MCOLS;c++) {
+      const x=OX+c*CELL, y=OY+r*CELL, cell=maze[r][c];
+      if (cell===0) {
+        ctx.fillStyle='#0d2d0a'; ctx.fillRect(x,y,CELL,CELL);
+        ctx.fillStyle='#1a4f12'; ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+      } else if (cell===1) {
+        ctx.fillStyle='rgba(255,238,160,0.9)';
+        ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,Math.max(2,CELL*.1),0,Math.PI*2); ctx.fill();
+      } else if (cell===2) {
+        const p=.85+.15*Math.sin(tick*.1);
+        ctx.fillStyle=`rgba(111,184,51,${p})`;
+        ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,CELL*.24,0,Math.PI*2); ctx.fill();
+        const g=ctx.createRadialGradient(x+CELL/2,y+CELL/2,0,x+CELL/2,y+CELL/2,CELL*.6);
+        g.addColorStop(0,`rgba(111,184,51,${.25*p})`); g.addColorStop(1,'rgba(111,184,51,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,CELL*.6,0,Math.PI*2); ctx.fill();
+      }
+    }
   }
 
   function drawPacman() {
-    const {x,y}=pac, a=facing, m=mouthA;
-    ctx.fillStyle='rgba(0,0,0,.18)';
-    ctx.beginPath(); ctx.ellipse(x+2,y+4,PAC_R*.9,PAC_R*.38,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#6FB833';
-    ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,PAC_R,a+m,a+Math.PI*2-m); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.2)';
-    ctx.beginPath(); ctx.arc(x-PAC_R*.28,y-PAC_R*.28,PAC_R*.36,0,Math.PI*2); ctx.fill();
-    const ex=x+Math.cos(a-.42)*PAC_R*.52, ey=y+Math.sin(a-.42)*PAC_R*.52;
-    ctx.fillStyle='#1A1A1A';
-    ctx.beginPath(); ctx.arc(ex,ey,2.4,0,Math.PI*2); ctx.fill();
+    const {x,y}=pac, r=CELL*.44, a=facing, m=mouthA;
+    ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x+2,y+4,r*.9,r*.38,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#6FB833'; ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,r,a+m,a+Math.PI*2-m); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x-r*.28,y-r*.28,r*.36,0,Math.PI*2); ctx.fill();
+    const ex=x+Math.cos(a-.42)*r*.52, ey=y+Math.sin(a-.42)*r*.52;
+    ctx.fillStyle='#1A1A1A'; ctx.beginPath(); ctx.arc(ex,ey,r*.14,0,Math.PI*2); ctx.fill();
   }
 
-  function drawEnemy(e) {
-    const {x,y,emoji}=e;
-    const w = Math.sin(tick*.09+e.wobble)*2.5;
-    ctx.save(); ctx.translate(x,y); ctx.rotate(w*.06);
-    ctx.filter = 'grayscale(1) brightness(0.15)';
-    ctx.font='42px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(emoji, 0, 2);
-    ctx.filter = 'none';
-    const eyeR=8.5, pa=Math.atan2(pac.y-e.y, pac.x-e.x);
-    [[-11,2],[11,2]].forEach(([ox,oy]) => {
-      ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1.2;
-      ctx.beginPath(); ctx.arc(ox,oy,eyeR,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      const px=ox+Math.cos(pa)*eyeR*.44, py=oy+Math.sin(pa)*eyeR*.44;
-      ctx.fillStyle='#111';
-      ctx.beginPath(); ctx.arc(px,py,eyeR*.48,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,.55)';
-      ctx.beginPath(); ctx.arc(px-1.5,py-1.5,eyeR*.18,0,Math.PI*2); ctx.fill();
-    });
+  function drawGhost(g) {
+    const sz=CELL*.9, wb=Math.sin(tick*.09+GHOST_EMOJIS.indexOf(g.emoji))*.06;
+    ctx.save(); ctx.translate(g.x,g.y); ctx.rotate(wb);
+    ctx.filter=g.scared?'grayscale(1) brightness(0.22) sepia(1) hue-rotate(190deg)':'grayscale(1) brightness(0.14)';
+    ctx.font=`${Math.floor(sz)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(g.emoji,0,2); ctx.filter='none';
+    if (!g.scared) {
+      const eyeR=sz*.2, pa=Math.atan2(pac.y-g.y,pac.x-g.x);
+      [[-sz*.22,sz*.05],[sz*.22,sz*.05]].forEach(([ox,oy])=>{
+        ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.arc(ox,oy,eyeR,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        const px=ox+Math.cos(pa)*eyeR*.44, py=oy+Math.sin(pa)*eyeR*.44;
+        ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(px,py,eyeR*.5,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(px-1,py-1,eyeR*.2,0,Math.PI*2); ctx.fill();
+      });
+    }
     ctx.restore();
   }
 
-  function drawJFTarget() {
-    const {x,y}=jf, r=JF_R, sc=1+.06*Math.sin(tick*.042);
-    const g=ctx.createRadialGradient(x,y,r*.2,x,y,r*2.8);
-    g.addColorStop(0,`rgba(111,184,51,${.28+.14*Math.sin(tick*.042)})`);
-    g.addColorStop(1,'rgba(111,184,51,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r*2.8,0,Math.PI*2); ctx.fill();
-    ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
-    ctx.fillStyle='#3A6B1A'; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#6FB833';
-    for (let i=0;i<10;i++) {
-      const a=(i/10)*Math.PI*2;
-      ctx.beginPath(); ctx.arc(Math.cos(a)*r*.62,Math.sin(a)*r*.62,r*.22,0,Math.PI*2); ctx.fill();
+  function drawJFBonus() {
+    if (!jfBonus) return;
+    const {x,y}=centerOf(jfBonus.col,jfBonus.row), sz=CELL*1.6, pulse=1+.08*Math.sin(tick*.14);
+    ctx.save(); ctx.translate(x,y); ctx.scale(pulse,pulse);
+    if (jfImage&&jfImage.complete&&jfImage.naturalWidth>0) {
+      ctx.drawImage(jfImage,-sz/2,-sz/2,sz,sz);
+    } else {
+      ctx.fillStyle='#4A8A20'; ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.fill();
     }
-    ctx.fillStyle='#7ECF40';
-    for (let i=0;i<5;i++) {
-      const a=(i/5)*Math.PI*2+.3;
-      ctx.beginPath(); ctx.arc(Math.cos(a)*r*.3,Math.sin(a)*r*.3,r*.14,0,Math.PI*2); ctx.fill();
-    }
-    ctx.fillStyle='#fff'; ctx.font=`bold ${r*.88}px Montserrat,sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('J',0,0);
     ctx.restore();
+    ctx.fillStyle='rgba(111,184,51,.9)'; ctx.font=`bold ${Math.floor(CELL*.5)}px Montserrat,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+1000',x,y+sz/2+CELL*.5);
   }
 
   function finishGame(result) {
@@ -841,9 +741,9 @@
     });
     div.innerHTML = won
       ? `<div style="font-size:2.2rem;margin-bottom:10px">🏆</div>
-         <div style="font-weight:900;font-size:1rem;color:#6FB833;letter-spacing:.08em;margin-bottom:10px">YOU CAUGHT THE JACKFRUIT!</div>
+         <div style="font-weight:900;font-size:1rem;color:#6FB833;letter-spacing:.08em;margin-bottom:10px">YOU ATE ALL THE DOTS!</div>
          <div style="font-size:.88rem;color:rgba(255,255,255,.78);line-height:1.8">
-           Congratulations — you've won a <strong style="color:#6FB833">10% discount</strong> on your first project.<br>
+           Score: <strong style="color:#6FB833">${score}</strong> — You've won a <strong style="color:#6FB833">10% discount</strong> on your first project.<br>
            Complete the form below today to claim it.</div>`
       : `<div style="font-size:2.2rem;margin-bottom:10px">👻</div>
          <div style="font-weight:900;font-size:1rem;color:#e05555;letter-spacing:.08em;margin-bottom:10px">THE FRUIT GHOSTS GOT YOU!</div>
