@@ -536,7 +536,7 @@
   function initMaze() {
     maze = MAZE_SRC.map(row => [...row]);
     totalDots = maze.flat().filter(c => c===1||c===2).length;
-    score = 0; powerTicks = 0; jfTicks = 480; jfBonus = null;
+    score = 0; powerTicks = 0;
     const HUD = 48;
     CELL = Math.max(16, Math.min(Math.floor(innerWidth/MCOLS), Math.floor((innerHeight-HUD)/MROWS)));
     OX = Math.floor((innerWidth  - CELL*MCOLS) / 2);
@@ -566,6 +566,7 @@
     else if (keys['ArrowRight']||keys.d||keys.D||joystickVec.dx> .3) { pac.nextDx= 1; pac.nextDy=0; }
     else if (keys['ArrowUp']   ||keys.w||keys.W||joystickVec.dy<-.3) { pac.nextDx=0; pac.nextDy=-1; }
     else if (keys['ArrowDown'] ||keys.s||keys.S||joystickVec.dy> .3) { pac.nextDx=0; pac.nextDy= 1; }
+    else { pac.nextDx=0; pac.nextDy=0; }
 
     // Move toward the center of pac.tileX/tileY
     const tx = OX+pac.tileX*CELL+CELL/2, ty = OY+pac.tileY*CELL+CELL/2;
@@ -621,17 +622,6 @@
     }
   }
 
-  function updateJFBonus() {
-    if (--jfTicks<=0) {
-      if (!jfBonus) { jfBonus={col:10,row:14}; jfTicks=300; }
-      else          { jfBonus=null; jfTicks=480; }
-    }
-    if (jfBonus) {
-      const bc=centerOf(jfBonus.col,jfBonus.row);
-      if (Math.hypot(pac.x-bc.x,pac.y-bc.y)<CELL*.85) { score+=1000; jfBonus=null; jfTicks=360; }
-    }
-  }
-
   function gameLoop(timestamp) {
     if (gameState!=='playing') return;
     raf = requestAnimationFrame(gameLoop);
@@ -646,7 +636,6 @@
     powerTicks=Math.max(0,powerTicks-1);
     ghosts.forEach(g=>{ g.scared=powerTicks>0; });
     ghosts.forEach(moveGhost);
-    updateJFBonus();
     mouthA+=0.14*mouthD; if (mouthA>.38||mouthA<.02) mouthD*=-1;
     const el=document.getElementById('jfScore'); if (el) el.textContent=score;
     for (const g of ghosts) {
@@ -664,7 +653,7 @@
   function drawGame() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle='#060808'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    drawMaze(); drawJFBonus(); ghosts.forEach(drawGhost); drawPacman();
+    drawMaze(); ghosts.forEach(drawGhost); drawPacman();
   }
 
   function drawMaze() {
@@ -677,12 +666,15 @@
         ctx.fillStyle='rgba(255,238,160,0.9)';
         ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,Math.max(2,CELL*.1),0,Math.PI*2); ctx.fill();
       } else if (cell===2) {
-        const p=.85+.15*Math.sin(tick*.1);
-        ctx.fillStyle=`rgba(111,184,51,${p})`;
-        ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,CELL*.24,0,Math.PI*2); ctx.fill();
-        const g=ctx.createRadialGradient(x+CELL/2,y+CELL/2,0,x+CELL/2,y+CELL/2,CELL*.6);
-        g.addColorStop(0,`rgba(111,184,51,${.25*p})`); g.addColorStop(1,'rgba(111,184,51,0)');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,CELL*.6,0,Math.PI*2); ctx.fill();
+        const sz=CELL*1.4, pulse=0.92+0.08*Math.sin(tick*.1);
+        ctx.save(); ctx.translate(x+CELL/2,y+CELL/2); ctx.scale(pulse,pulse);
+        ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.clip();
+        if (jfImage&&jfImage.complete&&jfImage.naturalWidth>0) {
+          ctx.drawImage(jfImage,-sz/2,-sz/2,sz,sz);
+        } else {
+          ctx.fillStyle='#4A8A20'; ctx.fillRect(-sz/2,-sz/2,sz,sz);
+        }
+        ctx.restore();
       }
     }
   }
@@ -713,26 +705,6 @@
       });
     }
     ctx.restore();
-  }
-
-  function drawJFBonus() {
-    if (!jfBonus) return;
-    const {x,y}=centerOf(jfBonus.col,jfBonus.row), sz=CELL*1.8, pulse=1+.08*Math.sin(tick*.14);
-    // Glow ring
-    const g=ctx.createRadialGradient(x,y,0,x,y,sz);
-    g.addColorStop(0,'rgba(111,184,51,0.35)'); g.addColorStop(1,'rgba(111,184,51,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,sz,0,Math.PI*2); ctx.fill();
-    ctx.save(); ctx.translate(x,y); ctx.scale(pulse,pulse);
-    // Clip to circle so white PNG background disappears
-    ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.clip();
-    if (jfImage&&jfImage.complete&&jfImage.naturalWidth>0) {
-      ctx.drawImage(jfImage,-sz/2,-sz/2,sz,sz);
-    } else {
-      ctx.fillStyle='#4A8A20'; ctx.fillRect(-sz/2,-sz/2,sz,sz);
-    }
-    ctx.restore();
-    ctx.fillStyle='rgba(111,184,51,.9)'; ctx.font=`bold ${Math.floor(CELL*.5)}px Montserrat,sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+1000',x,y+sz*.6+CELL*.4);
   }
 
   function finishGame(result) {
