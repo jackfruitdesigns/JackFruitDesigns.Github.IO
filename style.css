@@ -322,15 +322,20 @@ a { color: inherit; }
 .hero__fruit-lineup {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 36px;
+    gap: 18px;
+    margin-bottom: 44px;
+    flex-wrap: wrap;
 }
 
 .fruit-icon {
-    font-size: 1.9rem;
-    filter: grayscale(1) brightness(0.28);
-    display: block;
+    display: flex;
+    align-items: center;
     line-height: 1;
+}
+
+.fruit-icon svg {
+    width: 58px;
+    height: auto;
 }
 
 .fruit-sep {
@@ -342,22 +347,15 @@ a { color: inherit; }
 }
 
 .fruit-jackfruit {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 52px;
-    height: 52px;
-    background: var(--green-dark);
-    border-radius: 50%;
-    color: #fff;
-    font-family: var(--font-heading);
-    font-weight: 900;
-    font-size: 1.15rem;
     flex-shrink: 0;
-    box-shadow:
-        0 0 0 3px rgba(111,184,51,0.35),
-        0 0 0 7px rgba(111,184,51,0.12),
-        0 0 22px rgba(111,184,51,0.3);
+    filter: drop-shadow(0 0 12px rgba(111,184,51,0.45));
+}
+
+.fruit-jackfruit svg {
+    width: 100px;
+    height: auto;
 }
 
 /* ── Game button ─────────────────────────────────── */

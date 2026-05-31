@@ -429,19 +429,51 @@
   function startGame() {
     if (gameState === 'playing') return;
     window.scrollTo({ top: 0, behavior: 'instant' });
-    // Wait one frame so the browser finishes the scroll before measuring DOM positions
     requestAnimationFrame(() => {
-      buildGameCanvas();
-      buildGameHUD();
-      buildWalls();
-      buildGrid();
-      spawnAll();
-      lockScroll();
-      bindKeys();
-      if (isTouch) buildJoystick();
-      document.querySelector('.hero__fruit-lineup')?.classList.add('game-on');
-      gameState = 'playing'; tick = 0;
-      raf = requestAnimationFrame(gameLoop);
+      animateExplode(() => {
+        buildGameCanvas();
+        buildGameHUD();
+        buildWalls();
+        buildGrid();
+        spawnAll();
+        lockScroll();
+        bindKeys();
+        if (isTouch) buildJoystick();
+        document.querySelector('.hero__fruit-lineup')?.classList.add('game-on');
+        gameState = 'playing'; tick = 0;
+        raf = requestAnimationFrame(gameLoop);
+      });
+    });
+  }
+
+  function animateExplode(cb) {
+    const inner = document.querySelector('.hero__inner');
+    if (!inner) { cb(); return; }
+    const cx = innerWidth/2, cy = innerHeight/2;
+    inner.querySelectorAll('.hw').forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      const ang = Math.atan2(r.top + r.height/2 - cy, r.left + r.width/2 - cx);
+      const dist = 120 + Math.random()*100;
+      el.style.transition = `transform 0.4s cubic-bezier(0.55,0,1,0.45) ${i*40}ms, opacity 0.3s ease ${i*40}ms`;
+      el.style.transform  = `translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px) scale(0.4)`;
+      el.style.opacity    = '0';
+    });
+    ['.hero__eyebrow','.hero__sub','.hero__actions','.hero__fruit-lineup'].forEach(sel => {
+      const el = inner.querySelector(sel);
+      if (el) { el.style.transition = 'opacity 0.3s ease'; el.style.opacity = '0'; }
+    });
+    setTimeout(cb, 550);
+  }
+
+  function resetExplode() {
+    const inner = document.querySelector('.hero__inner');
+    if (!inner) return;
+    inner.querySelectorAll('.hw').forEach(el => {
+      el.style.transition = el.style.transform = el.style.opacity = '';
+    });
+    ['.hero__eyebrow','.hero__sub','.hero__actions','.hero__fruit-lineup'].forEach(sel => {
+      const el = inner.querySelector(sel);
+      if (el) el.style.transition = el.style.opacity = '';
     });
   }
 
@@ -640,15 +672,8 @@
 
   function spawnAll() {
     const W=innerWidth, H=innerHeight;
-    // Pac-Man from the green J icon
-    const jEl = document.querySelector('.fruit-jackfruit');
-    if (jEl) {
-      const b = jEl.getBoundingClientRect();
-      const cx = b.left+b.width/2, cy = b.top+b.height/2;
-      pac = isOpen(cx,cy,PAC_R) ? {x:cx,y:cy} : findSpot(W*.3,W-20,60,H*.5,PAC_R+2,null,0);
-    } else {
-      pac = findSpot(W*.3,W-20,60,H*.5,PAC_R+2,null,0);
-    }
+    // Pac-Man spawns at center bottom
+    pac = findSpot(W*0.4, W*0.6, H*0.75, H-40, PAC_R+2, null, 0);
     // Jackfruit — spawn far from pac, no path yet (calculated on first update)
     const jp = findSpot(20,W-20,H*.4,H-20,JF_R+2,pac,180);
     jf = { x:jp.x, y:jp.y, path:[], pathIdx:0, pathTick:0 };
@@ -749,12 +774,12 @@
     const {x,y,emoji}=e;
     const w = Math.sin(tick*.09+e.wobble)*2.5;
     ctx.save(); ctx.translate(x,y); ctx.rotate(w*.06);
-    ctx.filter = 'grayscale(1) brightness(0.12)';
-    ctx.font='28px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.filter = 'grayscale(1) brightness(0.15)';
+    ctx.font='42px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(emoji, 0, 2);
     ctx.filter = 'none';
-    const eyeR=7.5, pa=Math.atan2(pac.y-e.y, pac.x-e.x);
-    [[-7,-16],[7,-16]].forEach(([ox,oy]) => {
+    const eyeR=8.5, pa=Math.atan2(pac.y-e.y, pac.x-e.x);
+    [[-11,2],[11,2]].forEach(([ox,oy]) => {
       ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1.2;
       ctx.beginPath(); ctx.arc(ox,oy,eyeR,0,Math.PI*2); ctx.fill(); ctx.stroke();
       const px=ox+Math.cos(pa)*eyeR*.44, py=oy+Math.sin(pa)*eyeR*.44;
@@ -793,6 +818,7 @@
     gameState = result;
     cancelAnimationFrame(raf);
     unlockScroll(); unbindKeys();
+    resetExplode();
     document.querySelector('.hero__fruit-lineup')?.classList.remove('game-on');
     if (ctx) ctx.clearRect(0,0,canvas.width,canvas.height);
     rm('jfCanvas'); rm('jfHUD'); rm('jfDpad'); rm('jfJoystick'); rm('jfBlocker');
