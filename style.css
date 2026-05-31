@@ -500,7 +500,6 @@ a { color: inherit; }
     object-fit: cover;
     object-position: center top;
     display: block;
-    mix-blend-mode: multiply;
 }
 
 .about__text h2 {

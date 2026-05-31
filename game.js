@@ -438,7 +438,7 @@
   let powerTicks, jfTicks, jfBonus, jfImage;
   let pac, ghosts;
   let canvas, ctx;
-  let gameState = 'idle', raf = null, tick = 0;
+  let gameState = 'idle', raf = null, tick = 0, lastFrameTime = 0;
   let mouthA = 0.25, mouthD = 1, facing = 0;
   let keys = {};
   let joystickVec = { dx: 0, dy: 0 };
@@ -632,11 +632,13 @@
     }
   }
 
-  function gameLoop() {
+  function gameLoop(timestamp) {
     if (gameState!=='playing') return;
+    raf = requestAnimationFrame(gameLoop);
+    if (timestamp - lastFrameTime < 15.5) return; // cap at ~60fps even on 120Hz displays
+    lastFrameTime = timestamp;
     tick++;
     updateGame(); drawGame();
-    raf=requestAnimationFrame(gameLoop);
   }
 
   function updateGame() {
