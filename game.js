@@ -544,11 +544,11 @@
   }
 
   function spawnEntities() {
-    pac = { x: OX+10*CELL+CELL/2, y: OY+18*CELL+CELL/2, dx:0, dy:0, nextDx:-1, nextDy:0 };
+    pac = { x:OX+10*CELL+CELL/2, y:OY+18*CELL+CELL/2, tileX:10, tileY:18, dx:0, dy:0, nextDx:-1, nextDy:0 };
     const starts = [[1,2],[1,18],[4,10],[12,2],[12,18]];
     ghosts = GHOST_EMOJIS.map((emoji, i) => {
       const [r,c] = starts[i];
-      return { emoji, x:OX+c*CELL+CELL/2, y:OY+r*CELL+CELL/2, dx:i%2===0?1:-1, dy:0, scared:false };
+      return { emoji, x:OX+c*CELL+CELL/2, y:OY+r*CELL+CELL/2, tileX:c, tileY:r, dx:i%2===0?1:-1, dy:0, scared:false };
     });
   }
 
@@ -566,47 +566,59 @@
     else if (keys['ArrowRight']||keys.d||keys.D||joystickVec.dx> .3) { pac.nextDx= 1; pac.nextDy=0; }
     else if (keys['ArrowUp']   ||keys.w||keys.W||joystickVec.dy<-.3) { pac.nextDx=0; pac.nextDy=-1; }
     else if (keys['ArrowDown'] ||keys.s||keys.S||joystickVec.dy> .3) { pac.nextDx=0; pac.nextDy= 1; }
-    const {col,row} = tileOf(pac.x,pac.y);
-    const {x:cx,y:cy} = centerOf(col,row);
-    const snap = PAC_SPD+1;
-    if (Math.abs(pac.x-cx)<snap && Math.abs(pac.y-cy)<snap) {
-      pac.x=cx; pac.y=cy;
-      const cell=maze[row]?.[col];
-      if (cell===1) { maze[row][col]=3; score+=10; totalDots--; }
-      else if (cell===2) { maze[row][col]=3; score+=50; totalDots--; powerTicks=300; }
-      if (pac.nextDx!==pac.dx||pac.nextDy!==pac.dy) {
-        if (!isWall(col+pac.nextDx,row+pac.nextDy)) { pac.dx=pac.nextDx; pac.dy=pac.nextDy; }
+
+    // Move toward the center of pac.tileX/tileY
+    const tx = OX+pac.tileX*CELL+CELL/2, ty = OY+pac.tileY*CELL+CELL/2;
+    const dist = Math.hypot(pac.x-tx, pac.y-ty);
+
+    if (dist <= PAC_SPD) {
+      pac.x = tx; pac.y = ty;
+      const cell = maze[pac.tileY]?.[pac.tileX];
+      if (cell===1) { maze[pac.tileY][pac.tileX]=3; score+=10; totalDots--; }
+      else if (cell===2) { maze[pac.tileY][pac.tileX]=3; score+=50; totalDots--; powerTicks=300; }
+      // Try queued turn
+      if (!isWall(pac.tileX+pac.nextDx, pac.tileY+pac.nextDy)) { pac.dx=pac.nextDx; pac.dy=pac.nextDy; }
+      // Advance to next tile
+      if (pac.dx||pac.dy) {
+        if (!isWall(pac.tileX+pac.dx, pac.tileY+pac.dy)) { pac.tileX+=pac.dx; pac.tileY+=pac.dy; }
+        else { pac.dx=0; pac.dy=0; }
       }
-      if (isWall(col+pac.dx,row+pac.dy)) { pac.dx=0; pac.dy=0; }
+      // Tunnel wrap
+      if (pac.tileX < 0) { pac.tileX=MCOLS-1; pac.x=OX+(MCOLS-1)*CELL+CELL/2; }
+      if (pac.tileX >= MCOLS) { pac.tileX=0; pac.x=OX+CELL/2; }
+    } else {
+      const dx=tx-pac.x, dy=ty-pac.y;
+      pac.x += dx/dist*PAC_SPD; pac.y += dy/dist*PAC_SPD;
     }
-    pac.x+=pac.dx*PAC_SPD; pac.y+=pac.dy*PAC_SPD;
     if (pac.dx>0) facing=0; else if (pac.dx<0) facing=Math.PI;
     else if (pac.dy>0) facing=Math.PI/2; else if (pac.dy<0) facing=-Math.PI/2;
-    if (pac.x<OX-CELL) pac.x=OX+MCOLS*CELL-CELL/2;
-    if (pac.x>OX+MCOLS*CELL) pac.x=OX+CELL/2;
   }
 
   function moveGhost(g) {
-    const {col,row}=tileOf(g.x,g.y), {x:cx,y:cy}=centerOf(col,row);
+    const tx=OX+g.tileX*CELL+CELL/2, ty=OY+g.tileY*CELL+CELL/2;
     const spd=g.scared?GHOST_SPD*.5:GHOST_SPD;
-    if (Math.abs(g.x-cx)<spd+1 && Math.abs(g.y-cy)<spd+1) {
-      g.x=cx; g.y=cy;
-      const pt=tileOf(pac.x,pac.y);
+    const dist=Math.hypot(g.x-tx,g.y-ty);
+
+    if (dist<=spd) {
+      g.x=tx; g.y=ty;
       const dirs=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
-      let valid=dirs.filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!isWall(col+d.dx,row+d.dy));
-      if (!valid.length) valid=dirs.filter(d=>!isWall(col+d.dx,row+d.dy));
+      let valid=dirs.filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!isWall(g.tileX+d.dx,g.tileY+d.dy));
+      if (!valid.length) valid=dirs.filter(d=>!isWall(g.tileX+d.dx,g.tileY+d.dy));
       if (valid.length) {
         valid.sort((a,b)=>{
-          const da=(col+a.dx-pt.col)**2+(row+a.dy-pt.row)**2;
-          const db=(col+b.dx-pt.col)**2+(row+b.dy-pt.row)**2;
+          const da=(g.tileX+a.dx-pac.tileX)**2+(g.tileY+a.dy-pac.tileY)**2;
+          const db=(g.tileX+b.dx-pac.tileX)**2+(g.tileY+b.dy-pac.tileY)**2;
           return g.scared?db-da:da-db;
         });
         g.dx=valid[0].dx; g.dy=valid[0].dy;
+        g.tileX+=g.dx; g.tileY+=g.dy;
+        if (g.tileX<0) { g.tileX=MCOLS-1; g.x=OX+(MCOLS-1)*CELL+CELL/2; }
+        if (g.tileX>=MCOLS) { g.tileX=0; g.x=OX+CELL/2; }
       }
+    } else {
+      const dxx=tx-g.x, dyy=ty-g.y;
+      g.x+=dxx/dist*spd; g.y+=dyy/dist*spd;
     }
-    g.x+=g.dx*spd; g.y+=g.dy*spd;
-    if (g.x<OX-CELL) g.x=OX+MCOLS*CELL-CELL/2;
-    if (g.x>OX+MCOLS*CELL) g.x=OX+CELL/2;
   }
 
   function updateJFBonus() {
@@ -639,7 +651,8 @@
       if (Math.hypot(pac.x-g.x,pac.y-g.y)<CELL*.65) {
         if (g.scared) {
           g.scared=false; score+=200;
-          const sp=centerOf(g.dx<0?18:2,1); g.x=sp.x; g.y=sp.y; g.dx=0; g.dy=1;
+          const rc=g.dx<0?18:2;
+          g.tileX=rc; g.tileY=1; g.x=OX+rc*CELL+CELL/2; g.y=OY+CELL+CELL/2; g.dx=0; g.dy=1;
         } else { finishGame('lost'); return; }
       }
     }
@@ -702,16 +715,22 @@
 
   function drawJFBonus() {
     if (!jfBonus) return;
-    const {x,y}=centerOf(jfBonus.col,jfBonus.row), sz=CELL*1.6, pulse=1+.08*Math.sin(tick*.14);
+    const {x,y}=centerOf(jfBonus.col,jfBonus.row), sz=CELL*1.8, pulse=1+.08*Math.sin(tick*.14);
+    // Glow ring
+    const g=ctx.createRadialGradient(x,y,0,x,y,sz);
+    g.addColorStop(0,'rgba(111,184,51,0.35)'); g.addColorStop(1,'rgba(111,184,51,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,sz,0,Math.PI*2); ctx.fill();
     ctx.save(); ctx.translate(x,y); ctx.scale(pulse,pulse);
+    // Clip to circle so white PNG background disappears
+    ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.clip();
     if (jfImage&&jfImage.complete&&jfImage.naturalWidth>0) {
       ctx.drawImage(jfImage,-sz/2,-sz/2,sz,sz);
     } else {
-      ctx.fillStyle='#4A8A20'; ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#4A8A20'; ctx.fillRect(-sz/2,-sz/2,sz,sz);
     }
     ctx.restore();
     ctx.fillStyle='rgba(111,184,51,.9)'; ctx.font=`bold ${Math.floor(CELL*.5)}px Montserrat,sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+1000',x,y+sz/2+CELL*.5);
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+1000',x,y+sz*.6+CELL*.4);
   }
 
   function finishGame(result) {
