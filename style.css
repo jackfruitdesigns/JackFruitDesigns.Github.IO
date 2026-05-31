@@ -343,8 +343,9 @@ a { color: inherit; }
 .hero__fruit-lineup {
     display: flex;
     align-items: center;
-    gap: 18px;
-    margin-bottom: 44px;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 52px;
     flex-wrap: wrap;
 }
 
@@ -355,7 +356,7 @@ a { color: inherit; }
 }
 
 .fruit-icon svg {
-    width: 58px;
+    width: 80px;
     height: auto;
 }
 
@@ -375,7 +376,7 @@ a { color: inherit; }
 }
 
 .fruit-jackfruit svg {
-    width: 100px;
+    width: 140px;
     height: auto;
 }
 
