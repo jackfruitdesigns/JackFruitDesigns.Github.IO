@@ -382,20 +382,26 @@
   let pac, enemies, jf;
   let gameState = 'idle', raf = null, keys = {};
   let facing = 0, mouthA = 0.25, mouthD = 1, tick = 0;
+  let joystickVec = { dx: 0, dy: 0 };
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   function startGame() {
     if (gameState === 'playing') return;
-    window.scrollTo(0, 0);
-    buildGameCanvas();
-    buildGameHUD();
-    buildWalls();
-    buildGrid();
-    spawnAll();
-    lockScroll();
-    bindKeys();
-    document.querySelector('.hero__fruit-lineup')?.classList.add('game-on');
-    gameState = 'playing'; tick = 0;
-    raf = requestAnimationFrame(gameLoop);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Wait one frame so the browser finishes the scroll before measuring DOM positions
+    requestAnimationFrame(() => {
+      buildGameCanvas();
+      buildGameHUD();
+      buildWalls();
+      buildGrid();
+      spawnAll();
+      lockScroll();
+      bindKeys();
+      if (isTouch) buildJoystick();
+      document.querySelector('.hero__fruit-lineup')?.classList.add('game-on');
+      gameState = 'playing'; tick = 0;
+      raf = requestAnimationFrame(gameLoop);
+    });
   }
 
   function buildGameCanvas() {
@@ -426,36 +432,11 @@
     hud.innerHTML = `
       <span style="color:#6FB833;font-weight:900;font-size:.78rem;letter-spacing:.16em">JACKFRUIT CHASE</span>
       <span style="color:rgba(255,255,255,.4);font-size:.67rem">
-        WASD / ARROWS · Catch the jackfruit · Avoid the fruit ghosts
+        ${isTouch ? 'Joystick' : 'WASD / ARROWS'} · Catch the jackfruit · Avoid the fruit ghosts
       </span>
       <button id="jfQuit" style="${btnCSS('rgba(255,255,255,.22)','rgba(255,255,255,.55)')}">Quit</button>`;
     document.body.appendChild(hud);
     document.getElementById('jfQuit').addEventListener('click', () => finishGame('quit'));
-
-    // D-pad
-    const dp = document.createElement('div');
-    dp.id = 'jfDpad';
-    Object.assign(dp.style, {
-      position: 'fixed', bottom: '16px', right: '16px', zIndex: 10001,
-      display: 'grid', gridTemplateColumns: 'repeat(3,50px)',
-      gridTemplateRows: 'repeat(3,50px)', gap: '4px', pointerEvents: 'all',
-    });
-    [{ k:'ArrowUp',s:'▲',c:2,r:1 },{ k:'ArrowLeft',s:'◀',c:1,r:2 },
-     { k:'ArrowDown',s:'▼',c:2,r:3 },{ k:'ArrowRight',s:'▶',c:3,r:2 }].forEach(({ k, s, c, r }) => {
-      const b = document.createElement('button');
-      b.textContent = s;
-      Object.assign(b.style, {
-        background:'rgba(255,255,255,.08)', border:'1px solid rgba(255,255,255,.18)',
-        color:'#fff', fontSize:'1.1rem', borderRadius:'8px',
-        gridColumn:c, gridRow:r, touchAction:'none', userSelect:'none', cursor:'pointer',
-      });
-      b.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; },  { passive:false });
-      b.addEventListener('touchend',   e => { e.preventDefault(); delete keys[k]; },  { passive:false });
-      b.addEventListener('mousedown', () => { keys[k] = true; });
-      b.addEventListener('mouseup',   () => { delete keys[k]; });
-      dp.appendChild(b);
-    });
-    document.body.appendChild(dp);
 
     // Click blocker — stops mouse reaching links/buttons under the game
     const blocker = document.createElement('div');
@@ -471,8 +452,12 @@
   function buildWalls() {
     gameWalls = [];
 
-    // Hand-drawn custom walls (headline words + any other tweaked areas)
-    CUSTOM_WALLS.forEach(r => gameWalls.push({ ...r }));
+    // Headline words — measured live so they work at any screen size
+    document.querySelectorAll('.hw').forEach(el => {
+      const b = el.getBoundingClientRect();
+      if (b.width < 2 || b.height < 2) return;
+      gameWalls.push({ x: b.left - 4, y: b.top - 4, w: b.width + 8, h: b.height + 8 });
+    });
 
     // Auto-detected DOM walls for nav, buttons, cards etc.
     const add = (sel, P) => document.querySelectorAll(sel).forEach(el => {
@@ -655,6 +640,8 @@
     if (keys['ArrowRight']||keys.d||keys.D) dx= PAC_SPD;
     if (keys['ArrowUp']   ||keys.w||keys.W) dy=-PAC_SPD;
     if (keys['ArrowDown'] ||keys.s||keys.S) dy= PAC_SPD;
+    if (Math.abs(joystickVec.dx) > 0.15) dx = joystickVec.dx * PAC_SPD;
+    if (Math.abs(joystickVec.dy) > 0.15) dy = joystickVec.dy * PAC_SPD;
     if (dx && isOpen(pac.x+dx,pac.y,PAC_R)) { pac.x+=dx; facing=dx>0?0:Math.PI; }
     if (dy && isOpen(pac.x,pac.y+dy,PAC_R)) { pac.y+=dy; facing=dy>0?Math.PI/2:-Math.PI/2; }
   }
@@ -759,7 +746,8 @@
     unlockScroll(); unbindKeys();
     document.querySelector('.hero__fruit-lineup')?.classList.remove('game-on');
     if (ctx) ctx.clearRect(0,0,canvas.width,canvas.height);
-    rm('jfCanvas'); rm('jfHUD'); rm('jfDpad'); rm('jfBlocker');
+    rm('jfCanvas'); rm('jfHUD'); rm('jfDpad'); rm('jfJoystick'); rm('jfBlocker');
+    joystickVec.dx = joystickVec.dy = 0;
     if (result==='won'||result==='lost') {
       showBanner(result==='won');
       setTimeout(()=>document.getElementById('contact')?.scrollIntoView({behavior:'smooth'}),350);
@@ -796,4 +784,55 @@
   function onKU(e) { delete keys[e.key]; }
   function bindKeys()   { window.addEventListener('keydown',onKD); window.addEventListener('keyup',onKU); }
   function unbindKeys() { window.removeEventListener('keydown',onKD); window.removeEventListener('keyup',onKU); keys={}; }
+
+  function buildJoystick() {
+    rm('jfJoystick');
+    const ZR = 58;
+    const jz = document.createElement('div');
+    jz.id = 'jfJoystick';
+    Object.assign(jz.style, {
+      position: 'fixed', bottom: '24px', right: '24px',
+      width: ZR * 2 + 'px', height: ZR * 2 + 'px',
+      borderRadius: '50%',
+      background: 'rgba(255,255,255,0.07)',
+      border: '2px solid rgba(255,255,255,0.18)',
+      zIndex: 10001, touchAction: 'none', userSelect: 'none',
+    });
+    const knob = document.createElement('div');
+    Object.assign(knob.style, {
+      position: 'absolute',
+      width: '44px', height: '44px',
+      borderRadius: '50%',
+      background: 'rgba(111,184,51,0.65)',
+      border: '2px solid rgba(111,184,51,0.9)',
+      left: ZR - 22 + 'px', top: ZR - 22 + 'px',
+      pointerEvents: 'none',
+    });
+    jz.appendChild(knob);
+    document.body.appendChild(jz);
+
+    function update(touch) {
+      const rect = jz.getBoundingClientRect();
+      const ox = touch.clientX - rect.left - ZR;
+      const oy = touch.clientY - rect.top - ZR;
+      const dist = Math.hypot(ox, oy);
+      const nx = dist > ZR ? ox / dist * ZR : ox;
+      const ny = dist > ZR ? oy / dist * ZR : oy;
+      knob.style.transition = 'none';
+      knob.style.left = ZR - 22 + nx + 'px';
+      knob.style.top  = ZR - 22 + ny + 'px';
+      joystickVec.dx  = nx / ZR;
+      joystickVec.dy  = ny / ZR;
+    }
+
+    jz.addEventListener('touchstart', e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
+    jz.addEventListener('touchmove',  e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
+    jz.addEventListener('touchend',   e => {
+      e.preventDefault();
+      knob.style.transition = 'left 0.15s, top 0.15s';
+      knob.style.left = ZR - 22 + 'px';
+      knob.style.top  = ZR - 22 + 'px';
+      joystickVec.dx  = joystickVec.dy = 0;
+    }, { passive: false });
+  }
 })();
