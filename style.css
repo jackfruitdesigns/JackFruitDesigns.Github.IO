@@ -382,10 +382,10 @@ a { color: inherit; }
     position: absolute;
     inset: 0;
     background-image: url('logo-bg.png');
-    background-size: 60%;
-    background-position: center right 5%;
+    background-size: 55%;
+    background-position: center right 2%;
     background-repeat: no-repeat;
-    opacity: 0.07;
+    opacity: 0.18;
     pointer-events: none;
 }
 
