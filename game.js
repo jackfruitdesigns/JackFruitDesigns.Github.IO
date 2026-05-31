@@ -21,7 +21,7 @@
 
   // ── Entry point ─────────────────────────────────────────────
   // Wall editor: startDrawingMode  |  Game: startGame
-  window.startJackfruitGame = startGame;
+  window.startJackfruitGame = startDrawingMode;
 
   // Custom walls drawn in the wall editor — hero headline area
   const CUSTOM_WALLS = [
@@ -40,13 +40,14 @@
   // ════════════════════════════════════════════════════════════
   let dc = null, dctx = null;
   let drawRects  = loadSaved();
-  let selIdx     = null;           // index of selected rect, or null
-  let editorMode = 'idle';         // 'idle' | 'drawing' | 'moving' | 'resizing'
-  let dragHandle = null;           // which handle is being dragged
-  let dragStart  = null;           // {x,y} mouse position at drag start
-  let origRect   = null;           // copy of rect at drag start
-  let previewR   = null;           // rect being drawn (not yet committed)
-  let drawOrigin = null;           // {x,y} where new-rect drag began
+  let selIdx     = null;
+  let editorMode = 'idle';         // 'idle' | 'drawing' | 'moving' | 'resizing' | 'rotating'
+  let drawTool   = 'rect';         // 'rect' | 'circle'
+  let dragHandle = null;
+  let dragStart  = null;
+  let origRect   = null;
+  let previewR   = null;
+  let drawOrigin = null;
 
   const HR = 8;  // handle hit radius px
 
@@ -55,42 +56,62 @@
   }
   function persistRects() { localStorage.setItem('jfWalls', JSON.stringify(drawRects)); }
 
-  // 8 resize handles around a rect
+  function rotPt(px, py, cx, cy, a) {
+    const dx = px-cx, dy = py-cy;
+    return { x: cx + dx*Math.cos(a) - dy*Math.sin(a), y: cy + dx*Math.sin(a) + dy*Math.cos(a) };
+  }
+
   function handles(r) {
+    if (r.type === 'circle') {
+      return { n:{x:r.x,y:r.y-r.r}, e:{x:r.x+r.r,y:r.y}, s:{x:r.x,y:r.y+r.r}, w:{x:r.x-r.r,y:r.y} };
+    }
+    const cx = r.x+r.w/2, cy = r.y+r.h/2, a = r.angle||0;
+    const P = (px,py) => rotPt(px,py,cx,cy,a);
     return {
-      nw:{ x:r.x,       y:r.y       }, n:{ x:r.x+r.w/2, y:r.y       }, ne:{ x:r.x+r.w, y:r.y       },
-      e: { x:r.x+r.w,   y:r.y+r.h/2 },
-      se:{ x:r.x+r.w,   y:r.y+r.h   }, s:{ x:r.x+r.w/2, y:r.y+r.h   }, sw:{ x:r.x,     y:r.y+r.h   },
-      w: { x:r.x,       y:r.y+r.h/2 },
+      nw:P(r.x,       r.y       ), n:P(r.x+r.w/2, r.y       ), ne:P(r.x+r.w, r.y       ),
+      e: P(r.x+r.w,   r.y+r.h/2 ),
+      se:P(r.x+r.w,   r.y+r.h   ), s:P(r.x+r.w/2, r.y+r.h   ), sw:P(r.x,     r.y+r.h   ),
+      w: P(r.x,       r.y+r.h/2 ),
+      rot: P(r.x+r.w/2, r.y-30),   // rotation handle above top edge
     };
   }
 
-  // Which handle (if any) is within HR pixels of (mx,my)?
   function hitHandle(mx, my, r) {
     for (const [name, h] of Object.entries(handles(r)))
       if ((mx-h.x)**2 + (my-h.y)**2 <= HR**2) return name;
     return null;
   }
 
-  function insideRect(mx, my, r) {
-    return mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h;
+  function insideShape(mx, my, r) {
+    if (r.type === 'circle') return (mx-r.x)**2 + (my-r.y)**2 <= r.r**2;
+    const a = r.angle||0;
+    if (!a) return mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h;
+    const cx=r.x+r.w/2, cy=r.y+r.h/2;
+    const lx=(mx-cx)*Math.cos(-a)-(my-cy)*Math.sin(-a)+cx;
+    const ly=(mx-cx)*Math.sin(-a)+(my-cy)*Math.cos(-a)+cy;
+    return lx>=r.x && lx<=r.x+r.w && ly>=r.y && ly<=r.y+r.h;
   }
+  function insideRect(mx,my,r) { return insideShape(mx,my,r); }
 
-  // Apply a resize drag: handle name tells us which edges move
   function applyResize(handle, orig, dx, dy) {
-    let {x, y, w, h} = orig;
+    if (orig.type === 'circle') {
+      const nr = Math.hypot(dx, dy) * (handle==='w'||handle==='n' ? -1 : 1);
+      return { ...orig, r: Math.max(12, orig.r + nr) };
+    }
+    let {x, y, w, h, angle} = orig;
     if (handle.includes('n')) { y += dy; h -= dy; }
     if (handle.includes('s')) { h += dy; }
     if (handle.includes('w')) { x += dx; w -= dx; }
     if (handle.includes('e')) { w += dx; }
     if (w < 12) { if (handle.includes('w')) x = orig.x + orig.w - 12; w = 12; }
     if (h < 12) { if (handle.includes('n')) y = orig.y + orig.h - 12; h = 12; }
-    return { x, y, w, h };
+    return { x, y, w, h, angle: angle||0 };
   }
 
   const CURSOR_MAP = {
     nw:'nw-resize', n:'n-resize', ne:'ne-resize', e:'e-resize',
     se:'se-resize', s:'s-resize', sw:'sw-resize', w:'w-resize',
+    rot:'crosshair',
   };
 
   function startDrawingMode() {
@@ -137,78 +158,71 @@
   }
 
   function onDown({ x, y }) {
-    // 1 — if a rect is selected, check its handles first
     if (selIdx !== null) {
       const handle = hitHandle(x, y, drawRects[selIdx]);
+      if (handle === 'rot') {
+        editorMode = 'rotating'; dragStart = {x,y}; origRect = {...drawRects[selIdx]}; return;
+      }
       if (handle) {
         editorMode = 'resizing'; dragHandle = handle;
-        dragStart = {x,y}; origRect = {...drawRects[selIdx]};
-        return;
+        dragStart = {x,y}; origRect = {...drawRects[selIdx]}; return;
       }
-      // click inside selected rect → move it
-      if (insideRect(x, y, drawRects[selIdx])) {
-        editorMode = 'moving';
-        dragStart = {x,y}; origRect = {...drawRects[selIdx]};
-        return;
+      if (insideShape(x, y, drawRects[selIdx])) {
+        editorMode = 'moving'; dragStart = {x,y}; origRect = {...drawRects[selIdx]}; return;
       }
     }
-
-    // 2 — click any other rect → select it
     for (let i = drawRects.length - 1; i >= 0; i--) {
-      if (insideRect(x, y, drawRects[i])) {
-        selIdx = i; editorMode = 'idle';
-        renderDraw(); return;
-      }
+      if (insideShape(x, y, drawRects[i])) { selIdx = i; editorMode = 'idle'; renderDraw(); return; }
     }
-
-    // 3 — empty space → deselect + start drawing new rect
-    selIdx = null;
-    editorMode = 'drawing';
-    drawOrigin = {x,y}; previewR = null;
+    selIdx = null; editorMode = 'drawing'; drawOrigin = {x,y}; previewR = null;
   }
 
   function onMove({ x, y }) {
     if (editorMode === 'drawing') {
-      previewR = {
-        x: Math.min(drawOrigin.x, x), y: Math.min(drawOrigin.y, y),
-        w: Math.abs(x - drawOrigin.x), h: Math.abs(y - drawOrigin.y),
-      };
+      if (drawTool === 'circle') {
+        previewR = { type:'circle', x:drawOrigin.x, y:drawOrigin.y, r:Math.max(8, Math.hypot(x-drawOrigin.x, y-drawOrigin.y)) };
+      } else {
+        previewR = { x:Math.min(drawOrigin.x,x), y:Math.min(drawOrigin.y,y), w:Math.abs(x-drawOrigin.x), h:Math.abs(y-drawOrigin.y), angle:0 };
+      }
       renderDraw();
     } else if (editorMode === 'moving') {
-      drawRects[selIdx] = {
-        x: origRect.x + (x - dragStart.x),
-        y: origRect.y + (y - dragStart.y),
-        w: origRect.w, h: origRect.h,
-      };
+      const s = origRect;
+      drawRects[selIdx] = s.type==='circle'
+        ? { ...s, x:s.x+(x-dragStart.x), y:s.y+(y-dragStart.y) }
+        : { ...s, x:s.x+(x-dragStart.x), y:s.y+(y-dragStart.y) };
       renderDraw();
     } else if (editorMode === 'resizing') {
-      drawRects[selIdx] = applyResize(dragHandle, origRect, x - dragStart.x, y - dragStart.y);
+      const s = origRect;
+      if (s.type === 'circle') {
+        drawRects[selIdx] = { ...s, r: Math.max(12, Math.hypot(x-s.x, y-s.y)) };
+      } else {
+        drawRects[selIdx] = applyResize(dragHandle, s, x-dragStart.x, y-dragStart.y);
+      }
+      renderDraw();
+    } else if (editorMode === 'rotating') {
+      const s = origRect;
+      const cx = s.x+s.w/2, cy = s.y+s.h/2;
+      drawRects[selIdx] = { ...s, angle: Math.atan2(y-cy, x-cx) + Math.PI/2 };
       renderDraw();
     } else {
-      // Update cursor on hover
       if (selIdx !== null) {
         const h = hitHandle(x, y, drawRects[selIdx]);
-        if (h)                              { dc.style.cursor = CURSOR_MAP[h]; return; }
-        if (insideRect(x, y, drawRects[selIdx])) { dc.style.cursor = 'move';  return; }
+        if (h) { dc.style.cursor = CURSOR_MAP[h]||'crosshair'; return; }
+        if (insideShape(x, y, drawRects[selIdx])) { dc.style.cursor = 'move'; return; }
       }
       for (let i = drawRects.length-1; i >= 0; i--)
-        if (insideRect(x, y, drawRects[i])) { dc.style.cursor = 'move'; return; }
+        if (insideShape(x, y, drawRects[i])) { dc.style.cursor = 'move'; return; }
       dc.style.cursor = 'crosshair';
     }
   }
 
   function onUp() {
     if (editorMode === 'drawing') {
-      if (previewR && previewR.w > 8 && previewR.h > 8) {
-        drawRects.push({...previewR});
-        selIdx = drawRects.length - 1;
-        persistRects();
-      }
-      previewR = null;
-      editorMode = 'idle';
-    } else if (editorMode === 'moving' || editorMode === 'resizing') {
-      persistRects();
-      editorMode = 'idle';
+      const valid = previewR && (previewR.type==='circle' ? previewR.r>8 : previewR.w>8 && previewR.h>8);
+      if (valid) { drawRects.push({...previewR}); selIdx = drawRects.length-1; persistRects(); }
+      previewR = null; editorMode = 'idle';
+    } else if (editorMode === 'moving' || editorMode === 'resizing' || editorMode === 'rotating') {
+      persistRects(); editorMode = 'idle';
     }
     renderDraw();
   }
@@ -222,67 +236,84 @@
       dctx.fillStyle   = sel ? 'rgba(111,184,51,0.22)' : 'rgba(111,184,51,0.13)';
       dctx.strokeStyle = sel ? '#7ECF40' : '#6FB833';
       dctx.lineWidth   = sel ? 2.5 : 1.5;
-      dctx.fillRect(r.x, r.y, r.w, r.h);
-      dctx.strokeRect(r.x, r.y, r.w, r.h);
 
-      // Label
-      dctx.fillStyle = sel ? 'rgba(126,207,64,0.9)' : 'rgba(111,184,51,0.7)';
-      dctx.font = 'bold 11px Montserrat,sans-serif';
-      dctx.textAlign = 'left'; dctx.textBaseline = 'top';
-      dctx.fillText(`#${i+1}`, r.x + 5, r.y + 4);
+      dctx.save();
+      if (r.type === 'circle') {
+        dctx.beginPath(); dctx.arc(r.x, r.y, r.r, 0, Math.PI*2); dctx.fill(); dctx.stroke();
+        dctx.fillStyle = sel ? 'rgba(126,207,64,0.9)' : 'rgba(111,184,51,0.7)';
+        dctx.font = 'bold 11px Montserrat,sans-serif';
+        dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+        dctx.fillText(`#${i+1}`, r.x, r.y);
+      } else {
+        const a = r.angle||0, cx = r.x+r.w/2, cy = r.y+r.h/2;
+        dctx.translate(cx,cy); dctx.rotate(a);
+        dctx.fillRect(-r.w/2,-r.h/2,r.w,r.h);
+        dctx.strokeRect(-r.w/2,-r.h/2,r.w,r.h);
+        dctx.fillStyle = sel ? 'rgba(126,207,64,0.9)' : 'rgba(111,184,51,0.7)';
+        dctx.font = 'bold 11px Montserrat,sans-serif';
+        dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+        dctx.fillText(`#${i+1}`, 0, 0);
+      }
+      dctx.restore();
 
-      // Resize handles on selected rect
       if (sel) {
-        Object.values(handles(r)).forEach(h => {
-          dctx.fillStyle   = '#ffffff';
-          dctx.strokeStyle = '#6FB833';
-          dctx.lineWidth   = 2;
-          dctx.beginPath(); dctx.arc(h.x, h.y, HR - 2, 0, Math.PI*2); dctx.fill(); dctx.stroke();
+        const hs = handles(r);
+        // Dashed line from top to rotation handle (rects only)
+        if (!r.type && hs.n && hs.rot) {
+          dctx.save(); dctx.strokeStyle='rgba(255,220,0,0.5)'; dctx.lineWidth=1; dctx.setLineDash([4,3]);
+          dctx.beginPath(); dctx.moveTo(hs.n.x,hs.n.y); dctx.lineTo(hs.rot.x,hs.rot.y); dctx.stroke();
+          dctx.setLineDash([]); dctx.restore();
+        }
+        Object.entries(hs).forEach(([name, h]) => {
+          if (name === 'rot') {
+            dctx.fillStyle='#FFD700'; dctx.strokeStyle='#3A6B1A'; dctx.lineWidth=2;
+            dctx.beginPath(); dctx.arc(h.x,h.y,HR,0,Math.PI*2); dctx.fill(); dctx.stroke();
+            dctx.strokeStyle='#1A1A1A'; dctx.lineWidth=1.5;
+            dctx.beginPath(); dctx.arc(h.x,h.y,HR*.5,-Math.PI*.8,Math.PI*.2); dctx.stroke();
+          } else {
+            dctx.fillStyle='#fff'; dctx.strokeStyle='#6FB833'; dctx.lineWidth=2;
+            dctx.beginPath(); dctx.arc(h.x,h.y,HR-2,0,Math.PI*2); dctx.fill(); dctx.stroke();
+          }
         });
       }
     });
 
-    // Drawing preview
     if (previewR) {
-      dctx.fillStyle   = 'rgba(244,169,53,0.13)';
-      dctx.strokeStyle = '#F4A935';
-      dctx.lineWidth   = 2;
+      dctx.fillStyle='rgba(244,169,53,0.13)'; dctx.strokeStyle='#F4A935'; dctx.lineWidth=2;
       dctx.setLineDash([6,4]);
-      dctx.fillRect(previewR.x, previewR.y, previewR.w, previewR.h);
-      dctx.strokeRect(previewR.x, previewR.y, previewR.w, previewR.h);
+      if (previewR.type==='circle') {
+        dctx.beginPath(); dctx.arc(previewR.x,previewR.y,previewR.r,0,Math.PI*2); dctx.fill(); dctx.stroke();
+      } else {
+        dctx.fillRect(previewR.x,previewR.y,previewR.w,previewR.h);
+        dctx.strokeRect(previewR.x,previewR.y,previewR.w,previewR.h);
+      }
       dctx.setLineDash([]);
     }
 
-    // Counter + hint
-    dctx.fillStyle = 'rgba(255,255,255,.25)';
-    dctx.font = '11px Montserrat,sans-serif';
-    dctx.textAlign = 'right'; dctx.textBaseline = 'bottom';
+    dctx.fillStyle='rgba(255,255,255,.25)'; dctx.font='11px Montserrat,sans-serif';
+    dctx.textAlign='right'; dctx.textBaseline='bottom';
     dctx.fillText(
-      `${drawRects.length} wall${drawRects.length !== 1 ? 's' : ''} · click rect to select · drag handles to resize · Del to delete`,
-      dc.width - 14, dc.height - 14
+      `${drawRects.length} shape${drawRects.length!==1?'s':''} · select to move/resize · yellow handle = rotate · Del to delete`,
+      dc.width-14, dc.height-14
     );
 
-    // Floating delete button next to selected rect
     rm('jfDelBtn');
     if (selIdx !== null) {
       const r = drawRects[selIdx];
+      const bx = r.type==='circle' ? r.x+r.r+8 : r.x+r.w+8;
+      const by = r.type==='circle' ? r.y-r.r   : r.y;
       const btn = document.createElement('button');
       btn.id = 'jfDelBtn';
       btn.textContent = '✕ Delete';
       Object.assign(btn.style, {
-        position:'fixed',
-        left: Math.min(r.x + r.w + 8, innerWidth - 90) + 'px',
-        top:  r.y + 'px',
-        zIndex:10002,
-        background:'rgba(200,50,50,0.88)', color:'#fff', border:'none',
+        position:'fixed', left:Math.min(bx,innerWidth-90)+'px', top:by+'px',
+        zIndex:10002, background:'rgba(200,50,50,0.88)', color:'#fff', border:'none',
         padding:'5px 12px', borderRadius:'4px',
         fontFamily:"'Montserrat',sans-serif", fontSize:'11px', fontWeight:700,
         cursor:'pointer', letterSpacing:'.06em',
       });
       btn.addEventListener('click', () => {
-        drawRects.splice(selIdx, 1);
-        selIdx = null; editorMode = 'idle';
-        persistRects(); renderDraw();
+        drawRects.splice(selIdx,1); selIdx=null; editorMode='idle'; persistRects(); renderDraw();
       });
       document.body.appendChild(btn);
     }
@@ -300,16 +331,26 @@
     });
     hud.innerHTML = `
       <span style="color:#6FB833;font-weight:900;font-size:.78rem;letter-spacing:.15em;white-space:nowrap">WALL EDITOR</span>
+      <button id="jfToolRect"   style="${btnCSS('#6FB833','#fff',true)}">▭ Rect</button>
+      <button id="jfToolCircle" style="${btnCSS('rgba(255,255,255,.18)','rgba(255,255,255,.6)')}">● Circle</button>
       <span style="color:rgba(255,255,255,.32);font-size:.63rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-        Drag empty space to draw &nbsp;·&nbsp; Click rect to select &nbsp;·&nbsp; Drag handles to resize &nbsp;·&nbsp; Drag body to move
+        Drag to draw &nbsp;·&nbsp; Click to select &nbsp;·&nbsp; Drag handles to resize &nbsp;·&nbsp; Yellow handle = rotate
       </span>
       <button id="jfClearD" style="${btnCSS('rgba(255,80,80,.3)','rgba(255,110,110,.8)')}">Clear All</button>
       <button id="jfSubmit" style="${btnCSS('#3A6B1A','#fff',true)}">Submit Walls</button>
       <button id="jfQuitD"  style="${btnCSS('rgba(255,255,255,.18)','rgba(255,255,255,.5)')}">Quit</button>
     `;
     document.body.appendChild(hud);
+
+    function setTool(t) {
+      drawTool = t;
+      document.getElementById('jfToolRect').style.cssText   = btnCSS(t==='rect'   ? '#6FB833' : 'rgba(255,255,255,.18)', t==='rect'   ? '#fff' : 'rgba(255,255,255,.6)', t==='rect');
+      document.getElementById('jfToolCircle').style.cssText = btnCSS(t==='circle' ? '#6FB833' : 'rgba(255,255,255,.18)', t==='circle' ? '#fff' : 'rgba(255,255,255,.6)', t==='circle');
+    }
+    document.getElementById('jfToolRect').addEventListener('click',   () => setTool('rect'));
+    document.getElementById('jfToolCircle').addEventListener('click', () => setTool('circle'));
     document.getElementById('jfClearD').addEventListener('click', () => {
-      if (!confirm(`Delete all ${drawRects.length} walls?`)) return;
+      if (!confirm(`Delete all ${drawRects.length} shapes?`)) return;
       drawRects = []; selIdx = null; persistRects(); renderDraw();
     });
     document.getElementById('jfSubmit').addEventListener('click', submitWalls);
@@ -473,10 +514,18 @@
     ].forEach(s => add(s, 4));
   }
 
-  function hitWall(cx, cy, cr, { x, y, w, h }) {
-    const nx = Math.max(x, Math.min(cx, x + w));
-    const ny = Math.max(y, Math.min(cy, y + h));
-    return (cx-nx)**2 + (cy-ny)**2 < cr*cr;
+  function hitWall(px, py, pr, wall) {
+    if (wall.type === 'circle') return (px-wall.x)**2 + (py-wall.y)**2 < (pr+wall.r)**2;
+    const a = wall.angle||0;
+    let lx=px, ly=py;
+    if (a) {
+      const cx=wall.x+wall.w/2, cy=wall.y+wall.h/2;
+      lx=(px-cx)*Math.cos(-a)-(py-cy)*Math.sin(-a)+cx;
+      ly=(px-cx)*Math.sin(-a)+(py-cy)*Math.cos(-a)+cy;
+    }
+    const nx=Math.max(wall.x,Math.min(lx,wall.x+wall.w));
+    const ny=Math.max(wall.y,Math.min(ly,wall.y+wall.h));
+    return (lx-nx)**2+(ly-ny)**2 < pr*pr;
   }
   function isOpen(x, y, r) {
     if (x-r<0||x+r>innerWidth||y-r<0||y+r>innerHeight) return false;
