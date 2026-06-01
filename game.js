@@ -435,7 +435,9 @@
 
   let CELL, OX, OY;
   let maze, totalDots, score;
-  let powerTicks, jfImage, fruitsImg, ghostImgs = [], pelletImg;
+  let powerTicks, jfImage, fruitsImg;
+  const ghostImgs = Array.from({length:5}, (_,i) => { const img=new Image(); img.src=`ghost${i}.png`; return img; });
+  const pelletImg = (() => { const img=new Image(); img.src='pellet.png'; return img; })();
   let pac, ghosts;
   let canvas, ctx;
   let gameState = 'idle', raf = null, tick = 0, lastFrameTime = 0;
@@ -451,8 +453,6 @@
     if (gameState === 'playing') return;
     jfImage = new Image(); jfImage.src = 'jackfruit.png';
     fruitsImg = new Image(); fruitsImg.src = 'fruits.png';
-    ghostImgs = Array.from({length:5}, (_,i) => { const img=new Image(); img.src=`ghost${i}.png`; return img; });
-    pelletImg = new Image(); pelletImg.src = 'pellet.png';
     window.scrollTo({ top: 0, behavior: 'instant' });
     requestAnimationFrame(() => {
       animateExplode(() => {
@@ -473,19 +473,61 @@
     const inner = document.querySelector('.hero__inner');
     if (!inner) { cb(); return; }
     const cx = innerWidth/2, cy = innerHeight/2;
+
+    // Explode headline words outward
     inner.querySelectorAll('.hw').forEach((el, i) => {
       const r = el.getBoundingClientRect();
-      const ang = Math.atan2(r.top + r.height/2 - cy, r.left + r.width/2 - cx);
-      const dist = 120 + Math.random()*100;
-      el.style.transition = `transform 0.4s cubic-bezier(0.55,0,1,0.45) ${i*40}ms, opacity 0.3s ease ${i*40}ms`;
-      el.style.transform  = `translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px) scale(0.4)`;
-      el.style.opacity    = '0';
+      const ang = Math.atan2(r.top+r.height/2-cy, r.left+r.width/2-cx);
+      const dist = 120+Math.random()*100;
+      el.style.transition=`transform 0.4s cubic-bezier(0.55,0,1,0.45) ${i*40}ms, opacity 0.3s ease ${i*40}ms`;
+      el.style.transform=`translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px) scale(0.4)`;
+      el.style.opacity='0';
     });
-    ['.hero__eyebrow','.hero__sub','.hero__actions','.hero__fruit-lineup'].forEach(sel => {
+    ['.hero__eyebrow','.hero__sub','.hero__actions'].forEach(sel => {
       const el = inner.querySelector(sel);
-      if (el) { el.style.transition = 'opacity 0.3s ease'; el.style.opacity = '0'; }
+      if (el) { el.style.transition='opacity 0.3s ease'; el.style.opacity='0'; }
     });
-    setTimeout(cb, 550);
+
+    // Animate fruit strip — each fruit flies off to scatter into the game
+    const strip = inner.querySelector('.hero__fruits-strip');
+    if (strip) {
+      const rect = strip.getBoundingClientRect();
+      strip.style.transition='opacity 0.15s ease'; strip.style.opacity='0';
+      const slotW = rect.width / 6;
+
+      // 5 ghost fruits scatter, 4 pellet jackfruits fly to screen corners
+      const targets = [
+        {img:ghostImgs[0], slot:0, tx:-cx*.8,    ty:-cy*.6},
+        {img:ghostImgs[1], slot:1, tx: cx*.8,    ty:-cy*.6},
+        {img:ghostImgs[2], slot:2, tx: 0,        ty:-cy},
+        {img:ghostImgs[3], slot:3, tx:-cx*.8,    ty: cy*.6},
+        {img:ghostImgs[4], slot:4, tx: cx*.8,    ty: cy*.6},
+        {img:pelletImg,    slot:5, tx:-cx,        ty:-cy},
+        {img:pelletImg,    slot:5, tx: cx,        ty:-cy},
+        {img:pelletImg,    slot:5, tx:-cx,        ty: cy},
+        {img:pelletImg,    slot:5, tx: cx,        ty: cy},
+      ];
+
+      targets.forEach(({img, slot, tx, ty}, i) => {
+        if (!img||!img.complete) return;
+        const sz=44, sx=rect.left+slot*slotW+slotW/2, sy=rect.top+rect.height/2;
+        const el=document.createElement('img');
+        el.src=img.src;
+        Object.assign(el.style,{
+          position:'fixed', left:sx-sz/2+'px', top:sy-sz/2+'px',
+          width:sz+'px', height:sz+'px', zIndex:'9999', pointerEvents:'none',
+          transition:`transform 0.55s cubic-bezier(0.55,0,1,0.45) ${i*35}ms, opacity 0.4s ease ${i*35}ms`,
+        });
+        document.body.appendChild(el);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          el.style.transform=`translate(${tx}px,${ty}px) scale(0.25)`;
+          el.style.opacity='0';
+        }));
+        setTimeout(()=>el.remove(), 700);
+      });
+    }
+
+    setTimeout(cb, 620);
   }
 
   function resetExplode() {
@@ -494,7 +536,7 @@
     inner.querySelectorAll('.hw').forEach(el => {
       el.style.transition = el.style.transform = el.style.opacity = '';
     });
-    ['.hero__eyebrow','.hero__sub','.hero__actions','.hero__fruit-lineup'].forEach(sel => {
+    ['.hero__eyebrow','.hero__sub','.hero__actions','.hero__fruits-strip'].forEach(sel => {
       const el = inner.querySelector(sel);
       if (el) el.style.transition = el.style.opacity = '';
     });
@@ -667,7 +709,7 @@
         ctx.fillStyle='rgba(58,107,26,0.55)';
         ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,Math.max(2,CELL*.1),0,Math.PI*2); ctx.fill();
       } else if (cell===2) {
-        const sz=CELL*1.4, pulse=0.92+0.08*Math.sin(tick*.1);
+        const sz=CELL*0.85, pulse=0.92+0.08*Math.sin(tick*.1);
         ctx.save(); ctx.translate(x+CELL/2,y+CELL/2); ctx.scale(pulse,pulse);
         if (pelletImg&&pelletImg.complete&&pelletImg.naturalWidth>0) {
           ctx.drawImage(pelletImg,-sz/2,-sz/2,sz,sz);
