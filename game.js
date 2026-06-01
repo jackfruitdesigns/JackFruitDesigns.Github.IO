@@ -445,7 +445,7 @@
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const GHOST_EMOJIS = ['🍎','🍌','🍐','🍑','🍇'];
   const PAC_SPD = 2.0, GHOST_SPD = 1.5;
-  const PAC_TICKS = 5, GHOST_TICKS = 8; // move one tile every N ticks
+  const PAC_TICKS = 10, GHOST_TICKS = 16; // move one tile every N ticks
 
   function startGame() {
     if (gameState === 'playing') return;
@@ -689,7 +689,7 @@
   }
 
   function drawGhost(g) {
-    const sz=CELL*1.1;
+    const sz=CELL*0.8;
     const img = ghostImgs[g.fruitIdx];
     ctx.save(); ctx.translate(g.x,g.y);
     if (g.scared) ctx.filter='grayscale(1) brightness(0.5) sepia(1) hue-rotate(190deg)';
