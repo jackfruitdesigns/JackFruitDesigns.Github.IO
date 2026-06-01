@@ -156,9 +156,10 @@ a { color: inherit; }
     background: linear-gradient(
         to right,
         var(--black) 0%,
-        rgba(26,26,26,0.5) 35%,
-        transparent 50%,
-        rgba(26,26,26,0.5) 65%,
+        rgba(26,26,26,0.3) 32%,
+        transparent 40%,
+        transparent 60%,
+        rgba(26,26,26,0.3) 68%,
         var(--black) 100%
     );
 }

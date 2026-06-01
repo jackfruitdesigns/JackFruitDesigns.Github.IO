@@ -447,7 +447,7 @@
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const GHOST_EMOJIS = ['🍎','🍌','🍐','🍑','🍇'];
   const PAC_SPD = 2.0, GHOST_SPD = 1.5;
-  const PAC_TICKS = 10, GHOST_TICKS = 16; // move one tile every N ticks
+  const PAC_TICKS = 14, GHOST_TICKS = 22; // move one tile every N ticks
 
   function startGame() {
     if (gameState === 'playing') return;
