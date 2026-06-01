@@ -381,7 +381,7 @@ a { color: inherit; }
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-    width: 52%;
+    width: 26%;
     z-index: 0;
     pointer-events: none;
 }
