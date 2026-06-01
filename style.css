@@ -300,7 +300,7 @@ a { color: inherit; }
 
 .hero__headline {
     font-family: var(--font-heading);
-    font-size: clamp(3.5rem, 11vw, 8.5rem);
+    font-size: clamp(2.4rem, 5vw, 5.5rem);
     font-weight: 900;
     line-height: 1.22;
     letter-spacing: -0.035em;
@@ -316,7 +316,7 @@ a { color: inherit; }
     margin-bottom: 52px;
 }
 
-.hero__actions { display: flex; gap: 16px; flex-wrap: wrap; }
+.hero__actions { display: flex; gap: 12px; flex-wrap: nowrap; }
 
 /* Each headline word is its own wall block for the game */
 .hw { display: inline-block; }
