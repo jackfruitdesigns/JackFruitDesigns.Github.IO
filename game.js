@@ -435,7 +435,7 @@
 
   let CELL, OX, OY;
   let maze, totalDots, score;
-  let powerTicks, jfImage, fruitsImg;
+  let powerTicks, jfImage, fruitsImg, ghostImgs = [], pelletImg;
   let pac, ghosts;
   let canvas, ctx;
   let gameState = 'idle', raf = null, tick = 0, lastFrameTime = 0;
@@ -450,6 +450,8 @@
     if (gameState === 'playing') return;
     jfImage = new Image(); jfImage.src = 'jackfruit.png';
     fruitsImg = new Image(); fruitsImg.src = 'fruits.png';
+    ghostImgs = Array.from({length:5}, (_,i) => { const img=new Image(); img.src=`ghost${i}.png`; return img; });
+    pelletImg = new Image(); pelletImg.src = 'pellet.png';
     window.scrollTo({ top: 0, behavior: 'instant' });
     requestAnimationFrame(() => {
       animateExplode(() => {
@@ -654,7 +656,7 @@
 
   function drawGame() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='#060808'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
     drawMaze(); ghosts.forEach(drawGhost); drawPacman();
   }
 
@@ -662,19 +664,18 @@
     for (let r=0;r<MROWS;r++) for (let c=0;c<MCOLS;c++) {
       const x=OX+c*CELL, y=OY+r*CELL, cell=maze[r][c];
       if (cell===0) {
-        ctx.fillStyle='#0d2d0a'; ctx.fillRect(x,y,CELL,CELL);
-        ctx.fillStyle='#1a4f12'; ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+        ctx.fillStyle='#1A1A1A'; ctx.fillRect(x,y,CELL,CELL);
+        ctx.fillStyle='#2a2a2a'; ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
       } else if (cell===1) {
-        ctx.fillStyle='rgba(255,238,160,0.9)';
+        ctx.fillStyle='rgba(58,107,26,0.55)';
         ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,Math.max(2,CELL*.1),0,Math.PI*2); ctx.fill();
       } else if (cell===2) {
         const sz=CELL*1.4, pulse=0.92+0.08*Math.sin(tick*.1);
         ctx.save(); ctx.translate(x+CELL/2,y+CELL/2); ctx.scale(pulse,pulse);
-        if (fruitsImg&&fruitsImg.complete&&fruitsImg.naturalWidth>0) {
-          const fw=Math.floor(fruitsImg.naturalWidth/6), fh=fruitsImg.naturalHeight;
-          ctx.drawImage(fruitsImg, 5*fw, 0, fw, fh, -sz/2, -sz/2, sz, sz);
+        if (pelletImg&&pelletImg.complete&&pelletImg.naturalWidth>0) {
+          ctx.drawImage(pelletImg,-sz/2,-sz/2,sz,sz);
         } else {
-          ctx.fillStyle='#4A8A20'; ctx.fillRect(-sz/2,-sz/2,sz,sz);
+          ctx.fillStyle='#4A8A20'; ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.fill();
         }
         ctx.restore();
       }
@@ -691,28 +692,17 @@
   }
 
   function drawGhost(g) {
-    const sz=CELL*.9, wb=Math.sin(tick*.09+g.fruitIdx)*.06;
+    const sz=CELL*1.1, wb=Math.sin(tick*.09+g.fruitIdx)*.06;
+    const img = ghostImgs[g.fruitIdx];
     ctx.save(); ctx.translate(g.x,g.y); ctx.rotate(wb);
-    if (fruitsImg&&fruitsImg.complete&&fruitsImg.naturalWidth>0) {
-      const fw=Math.floor(fruitsImg.naturalWidth/6), fh=fruitsImg.naturalHeight;
-      if (g.scared) ctx.filter='grayscale(1) brightness(0.4) sepia(1) hue-rotate(190deg)';
-      ctx.drawImage(fruitsImg, g.fruitIdx*fw, 0, fw, fh, -sz/2, -sz/2, sz, sz);
-      ctx.filter='none';
+    if (g.scared) ctx.filter='grayscale(1) brightness(0.5) sepia(1) hue-rotate(190deg)';
+    if (img&&img.complete&&img.naturalWidth>0) {
+      ctx.drawImage(img,-sz/2,-sz/2,sz,sz);
     } else {
-      ctx.filter=g.scared?'grayscale(1) brightness(0.22) sepia(1) hue-rotate(190deg)':'grayscale(1) brightness(0.14)';
       ctx.font=`${Math.floor(sz)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(g.emoji,0,2); ctx.filter='none';
+      ctx.fillText(g.emoji,0,2);
     }
-    if (!g.scared) {
-      const eyeR=sz*.2, pa=Math.atan2(pac.y-g.y,pac.x-g.x);
-      [[-sz*.22,sz*.05],[sz*.22,sz*.05]].forEach(([ox,oy])=>{
-        ctx.fillStyle='#fff'; ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.arc(ox,oy,eyeR,0,Math.PI*2); ctx.fill(); ctx.stroke();
-        const px=ox+Math.cos(pa)*eyeR*.44, py=oy+Math.sin(pa)*eyeR*.44;
-        ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(px,py,eyeR*.5,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(px-1,py-1,eyeR*.2,0,Math.PI*2); ctx.fill();
-      });
-    }
+    ctx.filter='none';
     ctx.restore();
   }
 
