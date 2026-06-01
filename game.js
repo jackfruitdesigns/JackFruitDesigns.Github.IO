@@ -445,6 +445,7 @@
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const GHOST_EMOJIS = ['🍎','🍌','🍐','🍑','🍇'];
   const PAC_SPD = 2.0, GHOST_SPD = 1.5;
+  const PAC_TICKS = 5, GHOST_TICKS = 8; // move one tile every N ticks
 
   function startGame() {
     if (gameState === 'playing') return;
@@ -542,7 +543,7 @@
     totalDots = maze.flat().filter(c => c===1||c===2).length;
     score = 0; powerTicks = 0;
     const HUD = 48;
-    CELL = Math.max(16, Math.min(Math.floor(innerWidth/MCOLS), Math.floor((innerHeight-HUD)/MROWS)));
+    CELL = Math.max(16, Math.min(Math.floor(innerWidth/MCOLS), Math.floor((innerHeight-HUD)/MROWS))) + 4;
     OX = Math.floor((innerWidth  - CELL*MCOLS) / 2);
     OY = HUD + Math.floor((innerHeight - HUD - CELL*MROWS) / 2);
   }
@@ -566,64 +567,60 @@
   function centerOf(col, row) { return { x:OX+col*CELL+CELL/2, y:OY+row*CELL+CELL/2 }; }
 
   function movePac() {
+    // Read input every frame
     if      (keys['ArrowLeft'] ||keys.a||keys.A||joystickVec.dx<-.3) { pac.nextDx=-1; pac.nextDy=0; }
     else if (keys['ArrowRight']||keys.d||keys.D||joystickVec.dx> .3) { pac.nextDx= 1; pac.nextDy=0; }
     else if (keys['ArrowUp']   ||keys.w||keys.W||joystickVec.dy<-.3) { pac.nextDx=0; pac.nextDy=-1; }
     else if (keys['ArrowDown'] ||keys.s||keys.S||joystickVec.dy> .3) { pac.nextDx=0; pac.nextDy= 1; }
     else { pac.nextDx=0; pac.nextDy=0; }
 
-    // Move toward the center of pac.tileX/tileY
-    const tx = OX+pac.tileX*CELL+CELL/2, ty = OY+pac.tileY*CELL+CELL/2;
-    const dist = Math.hypot(pac.x-tx, pac.y-ty);
+    if (tick % PAC_TICKS !== 0) return; // only advance on move ticks
 
-    if (dist <= PAC_SPD) {
-      pac.x = tx; pac.y = ty;
-      const cell = maze[pac.tileY]?.[pac.tileX];
-      if (cell===1) { maze[pac.tileY][pac.tileX]=3; score+=10; totalDots--; }
-      else if (cell===2) { maze[pac.tileY][pac.tileX]=3; score+=50; totalDots--; powerTicks=300; }
-      // Try queued turn
+    // Try to turn into queued direction
+    if (pac.nextDx||pac.nextDy) {
       if (!isWall(pac.tileX+pac.nextDx, pac.tileY+pac.nextDy)) { pac.dx=pac.nextDx; pac.dy=pac.nextDy; }
-      // Advance to next tile
-      if (pac.dx||pac.dy) {
-        if (!isWall(pac.tileX+pac.dx, pac.tileY+pac.dy)) { pac.tileX+=pac.dx; pac.tileY+=pac.dy; }
-        else { pac.dx=0; pac.dy=0; }
-      }
-      // Tunnel wrap
-      if (pac.tileX < 0) { pac.tileX=MCOLS-1; pac.x=OX+(MCOLS-1)*CELL+CELL/2; }
-      if (pac.tileX >= MCOLS) { pac.tileX=0; pac.x=OX+CELL/2; }
-    } else {
-      const dx=tx-pac.x, dy=ty-pac.y;
-      pac.x += dx/dist*PAC_SPD; pac.y += dy/dist*PAC_SPD;
+    } else { pac.dx=0; pac.dy=0; }
+
+    // Advance one tile
+    if ((pac.dx||pac.dy) && !isWall(pac.tileX+pac.dx, pac.tileY+pac.dy)) {
+      pac.tileX+=pac.dx; pac.tileY+=pac.dy;
+      if (pac.tileX<0) pac.tileX=MCOLS-1;
+      if (pac.tileX>=MCOLS) pac.tileX=0;
     }
+
+    // Snap to tile center
+    pac.x = OX+pac.tileX*CELL+CELL/2;
+    pac.y = OY+pac.tileY*CELL+CELL/2;
+
+    // Eat
+    const cell = maze[pac.tileY]?.[pac.tileX];
+    if (cell===1) { maze[pac.tileY][pac.tileX]=3; score+=10; totalDots--; }
+    else if (cell===2) { maze[pac.tileY][pac.tileX]=3; score+=50; totalDots--; powerTicks=300; }
+
     if (pac.dx>0) facing=0; else if (pac.dx<0) facing=Math.PI;
     else if (pac.dy>0) facing=Math.PI/2; else if (pac.dy<0) facing=-Math.PI/2;
   }
 
   function moveGhost(g) {
-    const tx=OX+g.tileX*CELL+CELL/2, ty=OY+g.tileY*CELL+CELL/2;
-    const spd=g.scared?GHOST_SPD*.5:GHOST_SPD;
-    const dist=Math.hypot(g.x-tx,g.y-ty);
+    const interval = g.scared ? GHOST_TICKS*2 : GHOST_TICKS;
+    if (tick % interval !== 0) return;
 
-    if (dist<=spd) {
-      g.x=tx; g.y=ty;
-      const dirs=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
-      let valid=dirs.filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!isWall(g.tileX+d.dx,g.tileY+d.dy));
-      if (!valid.length) valid=dirs.filter(d=>!isWall(g.tileX+d.dx,g.tileY+d.dy));
-      if (valid.length) {
-        valid.sort((a,b)=>{
-          const da=(g.tileX+a.dx-pac.tileX)**2+(g.tileY+a.dy-pac.tileY)**2;
-          const db=(g.tileX+b.dx-pac.tileX)**2+(g.tileY+b.dy-pac.tileY)**2;
-          return g.scared?db-da:da-db;
-        });
-        g.dx=valid[0].dx; g.dy=valid[0].dy;
-        g.tileX+=g.dx; g.tileY+=g.dy;
-        if (g.tileX<0) { g.tileX=MCOLS-1; g.x=OX+(MCOLS-1)*CELL+CELL/2; }
-        if (g.tileX>=MCOLS) { g.tileX=0; g.x=OX+CELL/2; }
-      }
-    } else {
-      const dxx=tx-g.x, dyy=ty-g.y;
-      g.x+=dxx/dist*spd; g.y+=dyy/dist*spd;
+    const dirs=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+    let valid=dirs.filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!isWall(g.tileX+d.dx,g.tileY+d.dy));
+    if (!valid.length) valid=dirs.filter(d=>!isWall(g.tileX+d.dx,g.tileY+d.dy));
+    if (valid.length) {
+      valid.sort((a,b)=>{
+        const da=(g.tileX+a.dx-pac.tileX)**2+(g.tileY+a.dy-pac.tileY)**2;
+        const db=(g.tileX+b.dx-pac.tileX)**2+(g.tileY+b.dy-pac.tileY)**2;
+        return g.scared?db-da:da-db;
+      });
+      g.dx=valid[0].dx; g.dy=valid[0].dy;
+      g.tileX+=g.dx; g.tileY+=g.dy;
+      if (g.tileX<0) g.tileX=MCOLS-1;
+      if (g.tileX>=MCOLS) g.tileX=0;
     }
+    g.x = OX+g.tileX*CELL+CELL/2;
+    g.y = OY+g.tileY*CELL+CELL/2;
   }
 
   function gameLoop(timestamp) {
@@ -692,9 +689,9 @@
   }
 
   function drawGhost(g) {
-    const sz=CELL*1.1, wb=Math.sin(tick*.09+g.fruitIdx)*.06;
+    const sz=CELL*1.1;
     const img = ghostImgs[g.fruitIdx];
-    ctx.save(); ctx.translate(g.x,g.y); ctx.rotate(wb);
+    ctx.save(); ctx.translate(g.x,g.y);
     if (g.scared) ctx.filter='grayscale(1) brightness(0.5) sepia(1) hue-rotate(190deg)';
     if (img&&img.complete&&img.naturalWidth>0) {
       ctx.drawImage(img,-sz/2,-sz/2,sz,sz);
