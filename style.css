@@ -144,11 +144,10 @@ a { color: inherit; }
     inset: 0 0 auto 0;
     z-index: 200;
     height: var(--nav-h);
-    background: rgba(255,255,255,0.96);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--gray-200);
+    background: #ffffff;
+    border-bottom: 2px solid var(--black);
     transition: box-shadow 0.2s;
+    overflow: hidden;
 }
 .nav.scrolled { box-shadow: 0 2px 24px rgba(0,0,0,0.07); }
 
@@ -168,13 +167,13 @@ a { color: inherit; }
     text-decoration: none;
     position: absolute;
     left: 50%;
+    bottom: 0;
     transform: translateX(-50%);
-    flex-shrink: 0;
 }
 
 .nav__logo-crop {
     width: 220px;
-    height: 80px;
+    height: var(--nav-h);
     overflow: hidden;
     display: block;
 }
