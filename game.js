@@ -586,14 +586,18 @@
     totalDots = maze.flat().filter(c => c===1||c===2).length;
     score = 0; powerTicks = 0;
     const HUD = 48;
-    CELL = Math.max(12, Math.min(Math.floor((innerWidth-16)/MCOLS), Math.floor((innerHeight-HUD-16)/MROWS)));
+    const wCell = Math.floor((innerWidth-16)/MCOLS);
+    const hCell = Math.floor((innerHeight-HUD-16)/MROWS);
+    // Portrait: fill height (maze clips horizontally — acceptable)
+    // Landscape/desktop: fit both dimensions
+    CELL = Math.max(12, innerHeight > innerWidth * 1.2 ? hCell : Math.min(wCell, hCell));
     OX = Math.floor((innerWidth  - CELL*MCOLS) / 2);
     OY = HUD + Math.floor((innerHeight - HUD - CELL*MROWS) / 2);
   }
 
   function spawnEntities() {
     pac = { x:OX+10*CELL+CELL/2, y:OY+18*CELL+CELL/2, tileX:10, tileY:18, dx:0, dy:0, nextDx:-1, nextDy:0 };
-    const starts = [[1,2],[1,18],[4,10],[12,2],[12,18]];
+    const starts = [[1,5],[1,15],[4,10],[12,5],[12,15]];
     ghosts = GHOST_EMOJIS.map((emoji, i) => {
       const [r,c] = starts[i];
       return { emoji, fruitIdx:i, x:OX+c*CELL+CELL/2, y:OY+r*CELL+CELL/2, tileX:c, tileY:r, dx:i%2===0?1:-1, dy:0, scared:false };
@@ -798,7 +802,7 @@
     const jz = document.createElement('div');
     jz.id = 'jfJoystick';
     Object.assign(jz.style, {
-      position: 'fixed', bottom: '24px', right: '24px',
+      position: 'fixed', bottom: '8px', right: '8px',
       width: ZR * 2 + 'px', height: ZR * 2 + 'px',
       borderRadius: '50%',
       background: 'rgba(255,255,255,0.07)',
