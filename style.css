@@ -376,25 +376,12 @@ a { color: inherit; }
     transform: translateY(-2px);
 }
 
-.hero__logo-side {
-    position: absolute;
-    right: 8%;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 26%;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.hero__logo-img-full {
+.hero__fruits-strip {
     width: 100%;
+    max-width: 520px;
     height: auto;
     display: block;
-}
-
-.hero__content {
-    position: relative;
-    z-index: 1;
+    margin: 28px 0;
 }
 
 /* Soft radial glow — echoes the green from the fruit logo */
@@ -672,8 +659,7 @@ a { color: inherit; }
     .nav__hamburger { display: flex; }
 
     .hero    { padding: calc(var(--nav-h) + 60px) 24px 72px; }
-    .hero__inner { padding-right: 52%; }
-    .hero__logo-side { width: 48%; right: 0; top: 50%; transform: translateY(-50%); }
+    .hero__fruits-strip { max-width: 340px; }
     .services{ padding: 80px 0; }
     .about   { padding: 80px 0; }
     .contact { padding: 80px 0; }
