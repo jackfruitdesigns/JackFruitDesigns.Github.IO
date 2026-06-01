@@ -621,6 +621,9 @@
     else if (keys['ArrowDown'] ||keys.s||keys.S||joystickVec.dy> .3) { pac.nextDx=0; pac.nextDy= 1; }
     else { pac.nextDx=0; pac.nextDy=0; }
 
+    // Stop instantly on release — don't wait for the next move tick
+    if (!pac.nextDx && !pac.nextDy) { pac.dx=0; pac.dy=0; }
+
     if (tick % PAC_TICKS !== 0) return; // only advance on move ticks
 
     // Try to turn into queued direction
