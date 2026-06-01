@@ -508,7 +508,7 @@
         {img:pelletImg,    slot:5, tx: cx,        ty: cy},
       ];
 
-      targets.forEach(({img, slot, tx, ty}, i) => {
+      targets.forEach(({img, slot}, i) => {
         if (!img||!img.complete) return;
         const sz=44, sx=rect.left+slot*slotW+slotW/2, sy=rect.top+rect.height/2;
         const el=document.createElement('img');
@@ -516,14 +516,15 @@
         Object.assign(el.style,{
           position:'fixed', left:sx-sz/2+'px', top:sy-sz/2+'px',
           width:sz+'px', height:sz+'px', zIndex:'9999', pointerEvents:'none',
-          transition:`transform 0.55s cubic-bezier(0.55,0,1,0.45) ${i*35}ms, opacity 0.4s ease ${i*35}ms`,
+          transformOrigin:'center center',
+          transition:`transform 0.6s cubic-bezier(0.4,0,1,1) ${i*40}ms, opacity 0.5s ease ${i*40}ms`,
         });
         document.body.appendChild(el);
         requestAnimationFrame(()=>requestAnimationFrame(()=>{
-          el.style.transform=`translate(${tx}px,${ty}px) scale(0.25)`;
+          el.style.transform=`translateY(120px) scale(0)`;
           el.style.opacity='0';
         }));
-        setTimeout(()=>el.remove(), 700);
+        setTimeout(()=>el.remove(), 800);
       });
     }
 
