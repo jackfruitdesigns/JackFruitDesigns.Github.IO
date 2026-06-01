@@ -435,7 +435,7 @@
 
   let CELL, OX, OY;
   let maze, totalDots, score;
-  let powerTicks, jfTicks, jfBonus, jfImage;
+  let powerTicks, jfImage, fruitsImg;
   let pac, ghosts;
   let canvas, ctx;
   let gameState = 'idle', raf = null, tick = 0, lastFrameTime = 0;
@@ -448,6 +448,8 @@
 
   function startGame() {
     if (gameState === 'playing') return;
+    jfImage = new Image(); jfImage.src = 'jackfruit.png';
+    fruitsImg = new Image(); fruitsImg.src = 'fruits.png';
     window.scrollTo({ top: 0, behavior: 'instant' });
     requestAnimationFrame(() => {
       animateExplode(() => {
@@ -548,7 +550,7 @@
     const starts = [[1,2],[1,18],[4,10],[12,2],[12,18]];
     ghosts = GHOST_EMOJIS.map((emoji, i) => {
       const [r,c] = starts[i];
-      return { emoji, x:OX+c*CELL+CELL/2, y:OY+r*CELL+CELL/2, tileX:c, tileY:r, dx:i%2===0?1:-1, dy:0, scared:false };
+      return { emoji, fruitIdx:i, x:OX+c*CELL+CELL/2, y:OY+r*CELL+CELL/2, tileX:c, tileY:r, dx:i%2===0?1:-1, dy:0, scared:false };
     });
   }
 
@@ -668,9 +670,9 @@
       } else if (cell===2) {
         const sz=CELL*1.4, pulse=0.92+0.08*Math.sin(tick*.1);
         ctx.save(); ctx.translate(x+CELL/2,y+CELL/2); ctx.scale(pulse,pulse);
-        ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.clip();
-        if (jfImage&&jfImage.complete&&jfImage.naturalWidth>0) {
-          ctx.drawImage(jfImage,-sz/2,-sz/2,sz,sz);
+        if (fruitsImg&&fruitsImg.complete&&fruitsImg.naturalWidth>0) {
+          const fw=Math.floor(fruitsImg.naturalWidth/6), fh=fruitsImg.naturalHeight;
+          ctx.drawImage(fruitsImg, 5*fw, 0, fw, fh, -sz/2, -sz/2, sz, sz);
         } else {
           ctx.fillStyle='#4A8A20'; ctx.fillRect(-sz/2,-sz/2,sz,sz);
         }
@@ -689,11 +691,18 @@
   }
 
   function drawGhost(g) {
-    const sz=CELL*.9, wb=Math.sin(tick*.09+GHOST_EMOJIS.indexOf(g.emoji))*.06;
+    const sz=CELL*.9, wb=Math.sin(tick*.09+g.fruitIdx)*.06;
     ctx.save(); ctx.translate(g.x,g.y); ctx.rotate(wb);
-    ctx.filter=g.scared?'grayscale(1) brightness(0.22) sepia(1) hue-rotate(190deg)':'grayscale(1) brightness(0.14)';
-    ctx.font=`${Math.floor(sz)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(g.emoji,0,2); ctx.filter='none';
+    if (fruitsImg&&fruitsImg.complete&&fruitsImg.naturalWidth>0) {
+      const fw=Math.floor(fruitsImg.naturalWidth/6), fh=fruitsImg.naturalHeight;
+      if (g.scared) ctx.filter='grayscale(1) brightness(0.4) sepia(1) hue-rotate(190deg)';
+      ctx.drawImage(fruitsImg, g.fruitIdx*fw, 0, fw, fh, -sz/2, -sz/2, sz, sz);
+      ctx.filter='none';
+    } else {
+      ctx.filter=g.scared?'grayscale(1) brightness(0.22) sepia(1) hue-rotate(190deg)':'grayscale(1) brightness(0.14)';
+      ctx.font=`${Math.floor(sz)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(g.emoji,0,2); ctx.filter='none';
+    }
     if (!g.scared) {
       const eyeR=sz*.2, pa=Math.atan2(pac.y-g.y,pac.x-g.x);
       [[-sz*.22,sz*.05],[sz*.22,sz*.05]].forEach(([ox,oy])=>{
