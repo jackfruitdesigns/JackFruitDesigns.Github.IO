@@ -586,7 +586,7 @@
     totalDots = maze.flat().filter(c => c===1||c===2).length;
     score = 0; powerTicks = 0;
     const HUD = 48;
-    CELL = Math.max(16, Math.min(Math.floor(innerWidth/MCOLS), Math.floor((innerHeight-HUD)/MROWS))) + 4;
+    CELL = Math.max(12, Math.min(Math.floor((innerWidth-16)/MCOLS), Math.floor((innerHeight-HUD-16)/MROWS)));
     OX = Math.floor((innerWidth  - CELL*MCOLS) / 2);
     OY = HUD + Math.floor((innerHeight - HUD - CELL*MROWS) / 2);
   }
