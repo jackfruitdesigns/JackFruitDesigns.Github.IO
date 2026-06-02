@@ -805,7 +805,7 @@
     const jz = document.createElement('div');
     jz.id = 'jfJoystick';
     Object.assign(jz.style, {
-      position: 'fixed', display: 'none',
+      position: 'fixed', bottom: '8px', right: '8px',
       width: ZR * 2 + 'px', height: ZR * 2 + 'px',
       borderRadius: '50%',
       background: 'rgba(255,255,255,0.07)',
@@ -830,9 +830,10 @@
     function show(touch) {
       originX = touch.clientX;
       originY = touch.clientY;
+      jz.style.transition = 'none';
       jz.style.left = originX - ZR + 'px';
       jz.style.top  = originY - ZR + 'px';
-      jz.style.display = 'block';
+      jz.style.bottom = 'auto'; jz.style.right = 'auto';
       knob.style.transition = 'none';
       knob.style.left = ZR - 22 + 'px';
       knob.style.top  = ZR - 22 + 'px';
@@ -851,8 +852,7 @@
       joystickVec.dy  = ny / ZR;
     }
 
-    function hide() {
-      jz.style.display = 'none';
+    function release() {
       knob.style.transition = 'left 0.15s, top 0.15s';
       knob.style.left = ZR - 22 + 'px';
       knob.style.top  = ZR - 22 + 'px';
@@ -862,6 +862,6 @@
     const blocker = document.getElementById('jfBlocker');
     blocker.addEventListener('touchstart', e => { e.preventDefault(); show(e.touches[0]); update(e.touches[0]); }, { passive: false });
     blocker.addEventListener('touchmove',  e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
-    blocker.addEventListener('touchend',   e => { e.preventDefault(); hide(); }, { passive: false });
+    blocker.addEventListener('touchend',   e => { e.preventDefault(); release(); }, { passive: false });
   }
 })();
