@@ -805,12 +805,12 @@
     const jz = document.createElement('div');
     jz.id = 'jfJoystick';
     Object.assign(jz.style, {
-      position: 'fixed', bottom: '8px', right: '8px',
+      position: 'fixed', display: 'none',
       width: ZR * 2 + 'px', height: ZR * 2 + 'px',
       borderRadius: '50%',
       background: 'rgba(255,255,255,0.07)',
       border: '2px solid rgba(255,255,255,0.18)',
-      zIndex: 10001, touchAction: 'none', userSelect: 'none',
+      zIndex: 10001, pointerEvents: 'none', userSelect: 'none',
     });
     const knob = document.createElement('div');
     Object.assign(knob.style, {
@@ -825,10 +825,22 @@
     jz.appendChild(knob);
     document.body.appendChild(jz);
 
+    let originX = 0, originY = 0;
+
+    function show(touch) {
+      originX = touch.clientX;
+      originY = touch.clientY;
+      jz.style.left = originX - ZR + 'px';
+      jz.style.top  = originY - ZR + 'px';
+      jz.style.display = 'block';
+      knob.style.transition = 'none';
+      knob.style.left = ZR - 22 + 'px';
+      knob.style.top  = ZR - 22 + 'px';
+    }
+
     function update(touch) {
-      const rect = jz.getBoundingClientRect();
-      const ox = touch.clientX - rect.left - ZR;
-      const oy = touch.clientY - rect.top - ZR;
+      const ox = touch.clientX - originX;
+      const oy = touch.clientY - originY;
       const dist = Math.hypot(ox, oy);
       const nx = dist > ZR ? ox / dist * ZR : ox;
       const ny = dist > ZR ? oy / dist * ZR : oy;
@@ -839,14 +851,16 @@
       joystickVec.dy  = ny / ZR;
     }
 
-    jz.addEventListener('touchstart', e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
-    jz.addEventListener('touchmove',  e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
-    jz.addEventListener('touchend',   e => {
-      e.preventDefault();
+    function hide() {
+      jz.style.display = 'none';
       knob.style.transition = 'left 0.15s, top 0.15s';
       knob.style.left = ZR - 22 + 'px';
       knob.style.top  = ZR - 22 + 'px';
       joystickVec.dx  = joystickVec.dy = 0;
-    }, { passive: false });
+    }
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); show(e.touches[0]); update(e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchmove',  e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchend',   e => { e.preventDefault(); hide(); }, { passive: false });
   }
 })();
