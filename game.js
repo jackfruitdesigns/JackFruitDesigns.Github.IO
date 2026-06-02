@@ -717,8 +717,8 @@
         ctx.fillStyle='rgba(58,107,26,0.55)';
         ctx.beginPath(); ctx.arc(x+CELL/2,y+CELL/2,Math.max(2,CELL*.1),0,Math.PI*2); ctx.fill();
       } else if (cell===2) {
-        const sz=CELL*0.85, pulse=0.92+0.08*Math.sin(tick*.1);
-        ctx.save(); ctx.translate(x+CELL/2,y+CELL/2); ctx.scale(pulse,pulse);
+        const sz=CELL*0.85;
+        ctx.save(); ctx.translate(x+CELL/2,y+CELL/2);
         if (pelletImg&&pelletImg.complete&&pelletImg.naturalWidth>0) {
           ctx.drawImage(pelletImg,-sz/2,-sz/2,sz,sz);
         } else {
@@ -859,8 +859,9 @@
       joystickVec.dx  = joystickVec.dy = 0;
     }
 
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); show(e.touches[0]); update(e.touches[0]); }, { passive: false });
-    canvas.addEventListener('touchmove',  e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
-    canvas.addEventListener('touchend',   e => { e.preventDefault(); hide(); }, { passive: false });
+    const blocker = document.getElementById('jfBlocker');
+    blocker.addEventListener('touchstart', e => { e.preventDefault(); show(e.touches[0]); update(e.touches[0]); }, { passive: false });
+    blocker.addEventListener('touchmove',  e => { e.preventDefault(); update(e.touches[0]); }, { passive: false });
+    blocker.addEventListener('touchend',   e => { e.preventDefault(); hide(); }, { passive: false });
   }
 })();
