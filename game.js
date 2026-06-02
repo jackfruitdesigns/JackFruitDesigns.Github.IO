@@ -410,8 +410,8 @@
   const MCOLS = 21, MROWS = 21;
   // 0=wall  1=dot  2=power pellet  3=empty walkable
   const MAZE_SRC = [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0],
+    [0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,0],
     [0,2,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,2,0],
     [0,1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1,0],
     [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
@@ -429,8 +429,8 @@
     [0,1,1,1,1,0,1,1,1,0,0,0,1,1,1,0,1,1,1,1,0],
     [0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0],
     [0,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,0],
-    [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,1,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,1,0],
+    [0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0],
   ];
 
   let CELL, OX, OY;
@@ -605,8 +605,8 @@
   }
 
   function isWall(col, row) {
-    if (row<0||row>=MROWS) return true;
-    return maze[row][((col%MCOLS)+MCOLS)%MCOLS] === 0;
+    const r = ((row%MROWS)+MROWS)%MROWS;
+    return maze[r][((col%MCOLS)+MCOLS)%MCOLS] === 0;
   }
   function tileOf(px, py) {
     return { col:Math.max(0,Math.min(MCOLS-1,Math.floor((px-OX)/CELL))), row:Math.max(0,Math.min(MROWS-1,Math.floor((py-OY)/CELL))) };
@@ -636,6 +636,8 @@
       pac.tileX+=pac.dx; pac.tileY+=pac.dy;
       if (pac.tileX<0) pac.tileX=MCOLS-1;
       if (pac.tileX>=MCOLS) pac.tileX=0;
+      if (pac.tileY<0) pac.tileY=MROWS-1;
+      if (pac.tileY>=MROWS) pac.tileY=0;
     }
 
     // Snap to tile center
@@ -668,6 +670,8 @@
       g.tileX+=g.dx; g.tileY+=g.dy;
       if (g.tileX<0) g.tileX=MCOLS-1;
       if (g.tileX>=MCOLS) g.tileX=0;
+      if (g.tileY<0) g.tileY=MROWS-1;
+      if (g.tileY>=MROWS) g.tileY=0;
     }
     g.x = OX+g.tileX*CELL+CELL/2;
     g.y = OY+g.tileY*CELL+CELL/2;
