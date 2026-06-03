@@ -53,6 +53,14 @@ const FORMSPREE_ID = 'mvzyngjw';
 const form = document.getElementById('contactForm');
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const emailVal = form.querySelector('[name="email"]').value.trim();
+    if (!emailVal || !emailVal.includes('@')) {
+        const emailInput = form.querySelector('[name="email"]');
+        emailInput.focus();
+        emailInput.style.borderColor = '#c0392b';
+        setTimeout(() => emailInput.style.borderColor = '', 2000);
+        return;
+    }
     const btn = form.querySelector('button[type="submit"]');
     const original = btn.textContent;
     btn.textContent = 'Sending…';

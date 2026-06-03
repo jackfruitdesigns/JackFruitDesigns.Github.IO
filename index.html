@@ -156,19 +156,19 @@
             </div>
             <form class="contact__form" id="contactForm" novalidate>
                 <div class="form-row">
-                    <input type="text" name="name" placeholder="Your Name" required autocomplete="name">
+                    <input type="text" name="name" placeholder="Your Name (optional)" autocomplete="name">
                     <input type="email" name="email" placeholder="Email Address" required autocomplete="email">
                 </div>
                 <input type="text" name="company" placeholder="Company / Project (optional)" autocomplete="organization">
-                <select name="service" required>
-                    <option value="" disabled selected>What do you need?</option>
+                <select name="service">
+                    <option value="" disabled selected>What do you need? (optional)</option>
                     <option>Web Design</option>
                     <option>SEO</option>
                     <option>Marketing Strategy</option>
                     <option>CAD &amp; Rapid Prototyping</option>
                     <option>Multiple Services</option>
                 </select>
-                <textarea name="message" placeholder="Tell me about your project..." rows="5" required></textarea>
+                <textarea name="message" placeholder="Tell me about your project... (optional)" rows="5"></textarea>
                 <button type="submit" class="btn btn--primary btn--full">Send Message</button>
             </form>
         </div>
