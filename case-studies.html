@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work — Jackfruit Designs</title>
+    <meta name="description" content="Case studies from Jackfruit Designs — real projects in web design, SEO, marketing strategy, and CAD.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="jackfruit.png">
+    <link rel="apple-touch-icon" href="jackfruit.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- NAV -->
+    <nav class="nav" id="nav">
+        <div class="nav__inner">
+            <a href="index.html" class="nav__logo">
+                <div class="nav__logo-crop">
+                    <img src="logo.png" alt="Jackfruit Designs" class="nav__logo-img">
+                </div>
+            </a>
+            <ul class="nav__links">
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="case-studies.html">Work</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="index.html#contact" class="nav__cta">Let's Talk</a></li>
+            </ul>
+            <button class="nav__hamburger" id="hamburger" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="index.html#services">Services</a></li>
+            <li><a href="case-studies.html">Work</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="index.html#about">About</a></li>
+            <li><a href="index.html#contact">Let's Talk</a></li>
+        </ul>
+    </div>
+
+    <!-- PAGE HERO -->
+    <section class="page-hero">
+        <div class="container">
+            <p class="eyebrow">Case Studies</p>
+            <h1>The <span class="text-green">Work.</span></h1>
+            <p class="page-hero__sub">Real projects, real outcomes. Here's what I've built and the results behind it.</p>
+        </div>
+    </section>
+
+    <!-- CASE STUDIES -->
+    <section class="cases-section">
+        <div class="container">
+            <div class="cases-grid">
+
+                <!-- Case Study 1 -->
+                <a class="case-card reveal" href="#">
+                    <div class="case-card__thumb case-card__thumb--1">
+                        <div class="case-card__thumb-label">Cleaning Co.</div>
+                    </div>
+                    <div class="case-card__body">
+                        <div class="case-card__tags">
+                            <span class="tag tag--green">Web Design</span>
+                            <span class="tag tag--green">Marketing Strategy</span>
+                            <span class="tag">Branding</span>
+                        </div>
+                        <h3>Full Company Rebrand &amp; New Website</h3>
+                        <p>A local cleaning company had an outdated brand that wasn't converting visitors. I led the full rebrand end-to-end — new visual identity, messaging strategy, and a conversion-focused website built from scratch.</p>
+                        <div class="case-card__results">
+                            <div class="case-result-stat">
+                                <span class="stat-num">3×</span>
+                                <span class="stat-lbl">Quote requests</span>
+                            </div>
+                            <div class="case-result-stat">
+                                <span class="stat-num">+60%</span>
+                                <span class="stat-lbl">Page time-on-site</span>
+                            </div>
+                            <div class="case-result-stat">
+                                <span class="stat-num">2 wks</span>
+                                <span class="stat-lbl">Launch timeline</span>
+                            </div>
+                        </div>
+                        <span class="case-card__cta">Read Case Study</span>
+                    </div>
+                </a>
+
+                <!-- Case Study 2 -->
+                <a class="case-card reveal" href="#">
+                    <div class="case-card__thumb case-card__thumb--2">
+                        <div class="case-card__thumb-label">Local Gym</div>
+                    </div>
+                    <div class="case-card__body">
+                        <div class="case-card__tags">
+                            <span class="tag tag--green">Web Design</span>
+                            <span class="tag tag--green">SEO</span>
+                            <span class="tag">Lead Generation</span>
+                        </div>
+                        <h3>Lead-Gen Website &amp; Local SEO</h3>
+                        <p>A local gym needed more members and had zero organic presence. I built a fast, mobile-first website with a clear CTA funnel, then optimized it for local search to drive trial sign-ups from Google.</p>
+                        <div class="case-card__results">
+                            <div class="case-result-stat">
+                                <span class="stat-num">#1</span>
+                                <span class="stat-lbl">Local search rank</span>
+                            </div>
+                            <div class="case-result-stat">
+                                <span class="stat-num">+45%</span>
+                                <span class="stat-lbl">Trial sign-ups</span>
+                            </div>
+                            <div class="case-result-stat">
+                                <span class="stat-num">98</span>
+                                <span class="stat-lbl">PageSpeed score</span>
+                            </div>
+                        </div>
+                        <span class="case-card__cta">Read Case Study</span>
+                    </div>
+                </a>
+
+                <!-- Case Study 3 -->
+                <a class="case-card reveal" href="#">
+                    <div class="case-card__thumb case-card__thumb--3">
+                        <div class="case-card__thumb-label">RC Electronics Build</div>
+                    </div>
+                    <div class="case-card__body">
+                        <div class="case-card__tags">
+                            <span class="tag tag--green">CAD</span>
+                            <span class="tag tag--green">3D Printing</span>
+                            <span class="tag">Rapid Prototyping</span>
+                        </div>
+                        <h3>Custom RC Electronics Enclosure</h3>
+                        <p>Designed and printed a custom waterproof electronics housing for a modified RC truck build. Modeled in SolidWorks with snap-fit tolerances, printed on a Creality K1, iterated to final spec in under a week.</p>
+                        <div class="case-card__results">
+                            <div class="case-result-stat">
+                                <span class="stat-num">4</span>
+                                <span class="stat-lbl">Prototype iterations</span>
+                            </div>
+                            <div class="case-result-stat">
+                                <span class="stat-num">IPX5</span>
+                                <span class="stat-lbl">Water resistance rating</span>
+                            </div>
+                            <div class="case-result-stat">
+                                <span class="stat-num">5 days</span>
+                                <span class="stat-lbl">Sketch to final part</span>
+                            </div>
+                        </div>
+                        <span class="case-card__cta">Read Case Study</span>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer__inner">
+            <div class="footer__logo">
+                <span class="logo-line">
+                    <span class="logo-jack">JACK</span><span class="logo-fruit logo-fruit--bright">FRUIT</span>
+                </span>
+                <span class="logo-designs logo-designs--muted">DESIGNS</span>
+            </div>
+            <p class="footer__tagline">Websites That Stand Out.</p>
+            <p class="footer__copy">&copy; 2026 Jackfruit Designs. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

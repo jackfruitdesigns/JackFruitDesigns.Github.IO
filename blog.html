@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog — Jackfruit Designs</title>
+    <meta name="description" content="Thoughts on web design, marketing strategy, and building things — by Jack Pacanowsky of Jackfruit Designs.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="jackfruit.png">
+    <link rel="apple-touch-icon" href="jackfruit.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- NAV -->
+    <nav class="nav" id="nav">
+        <div class="nav__inner">
+            <a href="index.html" class="nav__logo">
+                <div class="nav__logo-crop">
+                    <img src="logo.png" alt="Jackfruit Designs" class="nav__logo-img">
+                </div>
+            </a>
+            <ul class="nav__links">
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="case-studies.html">Work</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="index.html#contact" class="nav__cta">Let's Talk</a></li>
+            </ul>
+            <button class="nav__hamburger" id="hamburger" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="index.html#services">Services</a></li>
+            <li><a href="case-studies.html">Work</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="index.html#about">About</a></li>
+            <li><a href="index.html#contact">Let's Talk</a></li>
+        </ul>
+    </div>
+
+    <!-- PAGE HERO -->
+    <section class="page-hero">
+        <div class="container">
+            <p class="eyebrow">Blog</p>
+            <h1>Thoughts &amp; <span class="text-green">Insights.</span></h1>
+            <p class="page-hero__sub">Web design, marketing, and what I'm learning while building real things for real clients.</p>
+        </div>
+    </section>
+
+    <!-- POSTS -->
+    <section class="posts-section">
+        <div class="container">
+            <div class="posts-grid">
+
+                <!-- Post 1 -->
+                <a class="post-card reveal" href="#">
+                    <div class="post-card__thumb post-card__thumb--1"></div>
+                    <div class="post-card__body">
+                        <div class="post-card__meta">
+                            <span class="post-date">May 28, 2026</span>
+                            <span class="tag tag--green">Web Design</span>
+                        </div>
+                        <h3>5 Reasons Your Business Website Is Costing You Clients</h3>
+                        <p>Most business owners assume their website is "good enough." Here are the five things I see killing conversion rates on almost every site I audit — and how to fix them fast.</p>
+                        <span class="post-card__link">Read More</span>
+                    </div>
+                </a>
+
+                <!-- Post 2 -->
+                <a class="post-card reveal" href="#">
+                    <div class="post-card__thumb post-card__thumb--2"></div>
+                    <div class="post-card__body">
+                        <div class="post-card__meta">
+                            <span class="post-date">Apr 14, 2026</span>
+                            <span class="tag tag--green">Branding</span>
+                        </div>
+                        <h3>What I Learned Rebranding a Real Company at 15</h3>
+                        <p>Leading a full rebrand — strategy, identity, website, and content — taught me more about business in two months than anything else. Here's what surprised me most.</p>
+                        <span class="post-card__link">Read More</span>
+                    </div>
+                </a>
+
+                <!-- Post 3 -->
+                <a class="post-card reveal" href="#">
+                    <div class="post-card__thumb post-card__thumb--3"></div>
+                    <div class="post-card__body">
+                        <div class="post-card__meta">
+                            <span class="post-date">Mar 3, 2026</span>
+                            <span class="tag tag--green">CAD</span>
+                        </div>
+                        <h3>CAD to Print: How I Build Rapid Prototypes in Under a Week</h3>
+                        <p>From a rough sketch to a physical part in five days. I walk through my SolidWorks workflow, how I handle tolerances for FDM printing, and the iteration loop that actually works.</p>
+                        <span class="post-card__link">Read More</span>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer__inner">
+            <div class="footer__logo">
+                <span class="logo-line">
+                    <span class="logo-jack">JACK</span><span class="logo-fruit logo-fruit--bright">FRUIT</span>
+                </span>
+                <span class="logo-designs logo-designs--muted">DESIGNS</span>
+            </div>
+            <p class="footer__tagline">Websites That Stand Out.</p>
+            <p class="footer__copy">&copy; 2026 Jackfruit Designs. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

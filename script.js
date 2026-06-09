@@ -51,7 +51,7 @@ document.querySelectorAll('.service-card, .about__text, .section-header')
 const FORMSPREE_ID = 'mvzyngjw';
 
 const form = document.getElementById('contactForm');
-form.addEventListener('submit', async (e) => {
+if (form) form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const emailVal = form.querySelector('[name="email"]').value.trim();
     if (!emailVal || !emailVal.includes('@')) {
